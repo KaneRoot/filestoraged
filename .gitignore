@@ -1,0 +1,5 @@
+shard.lock
+bin
+lib
+
+.*
