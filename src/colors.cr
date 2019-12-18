@@ -1,0 +1,5 @@
+CRED      = "\033[31m"
+CBLUE     = "\033[36m"
+CGREEN    = "\033[32m"
+CRESET    = "\033[00m"
+CORANGE   = "\033[33m"
