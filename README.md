@@ -12,24 +12,24 @@ format: IPC USER MESSAGE TYPE, JSON ENCODED MESSAGE
 
 1. AUTHENTICATION message
 
-	1, { message-id: "UUID", token: "JWT", files: [
-			{ name: "NAME", size: SIZE-IN-BYTES (unsigned int 64 bits) },
-			{ name: "NAME", size: SIZE-IN-BYTES (unsigned int 64 bits) },
-		], fid: "UUID", tags: [ TAG-NAME, TAG-NAME ]
-	}
+		1, { message-id: "UUID", token: "JWT", files: [
+				{ name: "NAME", size: SIZE-IN-BYTES (unsigned int 64 bits) },
+				{ name: "NAME", size: SIZE-IN-BYTES (unsigned int 64 bits) },
+			], fid: "UUID", tags: [ TAG-NAME, TAG-NAME ]
+		}
 
 	note: The server knows the user id from the token (JWT) and stores the received files in a
 2. RESPONSE message
 
-    2, { message-id: "UUID", response: "Ok" }
+	    2, { message-id: "UUID", response: "Ok" }
 
-    or
+	    or
 
-    2, { message-id: "UUID", response: "Error", reason: "REASON" }
+	    2, { message-id: "UUID", response: "Error", reason: "REASON" }
 
 3. TRANSFER message
 
-	3, { message-id: "UUID", chunk: "UUID", data: [ BINARY DATA ] }
+		3, { message-id: "UUID", chunk: "UUID", data: [ BINARY DATA ] }
 
 # Rationale
 
@@ -45,5 +45,6 @@ The file server to proxy connection can be dropped, we have to ensure the commun
 # How this works:
 
 * libipc is used to communicate
+* dodb is used to keep track of the files, using its tag system
 * messages are: JSON encoded, 1KB buffered data
 * message example: { message-id: "UUID", chunk: "UUID", data: [1KB BINARY DATA] }
