@@ -1,4 +1,3 @@
-
 require "uuid"
 
 class Token
@@ -11,13 +10,31 @@ class Token
 	end
 end
 
+class FileInfo
+	JSON.mapping({
+		name: String,
+		size: UInt32,
+		tags: Array(String)?
+	})
+
+	def initialize(@name, @size, @tags = nil)
+	end
+
+	def initialize(file : File, @tags = nil)
+		@name = file.basename
+		@size = file.size
+	end
+end
+
 class AuthenticationMessage
 	JSON.mapping({
 		mid: String,
-		token: Token
+		token: Token,
+		files: Array(FileInfo),
+		tags: Array(String)?
 	})
 
-	def initialize(@token)
+	def initialize(@token, @files, @tags = nil)
 		@mid = UUID.random.to_s
 	end
 end
@@ -30,5 +47,17 @@ class Response
 	})
 
 	def initialize(@mid, @response, @reason = nil)
+	end
+end
+
+class Transfer
+	JSON.mapping({
+		mid: String,
+		chunk: String,
+		data: Slice(UInt8)
+	})
+
+	def initialize(@chunk, @data)
+		@mid = UUID.random.to_s
 	end
 end

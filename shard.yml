@@ -1,0 +1,26 @@
+name: filestorage
+version: 0.1.0
+
+authors:
+  - Karchnu <karchnu@karchnu.fr>
+
+description: |
+  A file storage service.
+
+dependencies:
+  ipc:
+    git: https://git.karchnu.fr/WeirdOS/ipc.cr
+  dodb:
+    git: https://git.karchnu.fr/WeirdOS/dodb.cr
+  authd:
+    git: https://github.com/Lukc/authd
+
+targets:
+    json-tests:
+        main: src/json_tests.cr
+    filestorage:
+        main: src/main.cr
+    filestorageclient:
+        main: src/client.cr
+
+license: MIT

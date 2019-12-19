@@ -4,6 +4,8 @@ require "json"
 
 require "./colors"
 
+# require "dodb"
+
 require "./common.cr"
 
 storage_directory = "./storage"
@@ -76,6 +78,10 @@ service.loop do |event|
 			puts "User is not currently connected"
 
 			authentication_message = AuthenticationMessage.from_json(String.new event.message.payload)
+
+			authentication_message.files.each do |file|
+				puts "uploading #{file.name} - #{file.size} bytes"
+			end
 
 			new_user = User.new authentication_message.token
 			connected_users[event.connection.fd] = new_user

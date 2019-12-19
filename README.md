@@ -48,3 +48,8 @@ The file server to proxy connection can be dropped, we have to ensure the commun
 * dodb is used to keep track of the files, using its tag system
 * messages are: JSON encoded, 1KB buffered data
 * message example: { message-id: "UUID", chunk: "UUID", data: [1KB BINARY DATA] }
+
+
+# TODO
+
+* Quotas
