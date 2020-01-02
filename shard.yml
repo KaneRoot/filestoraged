@@ -16,11 +16,13 @@ dependencies:
     git: https://github.com/Lukc/authd
 
 targets:
+    common-tests:
+        main: src/tests/common-tests.cr
     json-tests:
-        main: src/json_tests.cr
-    filestorage:
-        main: src/main.cr
-    filestorageclient:
-        main: src/client.cr
+        main: src/tests/json_tests.cr
+    server:
+        main: src/server/main.cr
+    client:
+        main: src/client/main.cr
 
 license: MIT
