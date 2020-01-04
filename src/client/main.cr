@@ -17,7 +17,7 @@ service_name = "filestorage"
 files_and_directories_to_transfer = Array(String).new
 
 # This is the requests we will send to the server
-requests = Array(FM::Request).new
+upload_requests = Array(FM::UploadRequest).new
 
 
 OptionParser.parse do |parser|
@@ -68,10 +68,10 @@ files_and_directories_to_transfer.each do |f|
 end
 
 files_info.values.each do |file_info|
-	requests << FM::UploadRequest.new file_info
+	upload_requests << FM::UploadRequest.new file_info
 end
 
-pp! requests
+# pp! upload_requests
 
 #
 # Connection to the service
@@ -84,7 +84,8 @@ client = IPC::Client.new service_name
 #
 
 token = FileStorage::Token.new 1002, "karchnu"
-authentication_message = FM::Authentication.new token, requests
+authentication_message = FM::Authentication.new token, upload_requests
+pp! authentication_message
 client.send FileStorage::MessageType::Authentication.to_u8, authentication_message.to_json
 
 #
@@ -99,6 +100,7 @@ response = FM::Response.from_json(String.new m.payload)
 
 if response.mid == authentication_message.mid
 	puts "This is a response for the authentication message"
+	pp! response
 else
 	raise "Message IDs from authentication message and its response differ"
 end
@@ -122,6 +124,23 @@ def file_transfer(client : IPC::Client, file : File, file_info : FileStorage::Fi
 		counter += 1
 
 		buffer = Bytes.new buffer_size
+
+
+		# Check for the response
+		m = client.read
+		mtype = FileStorage::MessageType.new m.type.to_i32
+		if mtype != FileStorage::MessageType::Response
+			pp! m
+			raise "Message received was not expected: #{mtype}"
+		end
+
+		response = FM::Response.from_json(String.new m.payload)
+
+		if response.mid != transfer_message.mid
+			raise "Message received has a wrong mid: #{response.mid} != #{transfer_message.mid}"
+		else
+			pp! response
+		end
 	end
 end
 

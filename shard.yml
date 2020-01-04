@@ -20,7 +20,7 @@ targets:
         main: src/tests/common-tests.cr
     json-tests:
         main: src/tests/json_tests.cr
-    server:
+    filestoraged:
         main: src/server/main.cr
     client:
         main: src/client/main.cr

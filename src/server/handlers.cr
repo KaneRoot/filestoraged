@@ -14,8 +14,8 @@ def hdl_transfer(message : FileStorage::Message::Transfer,
 
 	pp! transfer_message
 
-	puts "chunk: #{transfer_message.chunk}"
-	puts "data: #{Base64.decode transfer_message.data}"
+	# puts "chunk: #{transfer_message.chunk}"
+	# puts "data: #{Base64.decode transfer_message.data}"
 
 	FileStorage::Message::Response.new message.mid, "Ok"
 end
@@ -98,7 +98,7 @@ def hdl_authentication(event : IPC::Event::Message)
 		# AuthenticationMessage includes requests.
 		new_user =
 			User.new authentication_message.token,
-				authentication_message.requests
+				[ authentication_message.uploads, authentication_message.downloads ].flatten
 
 		Context.connected_users[event.connection.fd] = userid
 
@@ -121,7 +121,7 @@ def hdl_authentication(event : IPC::Event::Message)
 	# TODO: quotas
 	# Quotas are not defined yet.
 
-	responses = hdl_requests authentication_message.requests,
+	responses = hdl_requests [ authentication_message.uploads, authentication_message.downloads ].flatten,
 		Context.users_status[userid],
 		event
 
@@ -129,4 +129,6 @@ def hdl_authentication(event : IPC::Event::Message)
 	# The response is "Ok" when the message is well received and authorized.
 	response = FileStorage::Message::Responses.new authentication_message.mid, "Ok", responses
 	event.connection.send FileStorage::MessageType::Responses.to_u8, response.to_json
+	pp! FileStorage::MessageType::Responses.to_u8
+	pp! response
 end
