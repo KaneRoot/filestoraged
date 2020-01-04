@@ -42,8 +42,8 @@ Context.service.not_nil!.loop do |event|
 		if ! userid && mtype != FileStorage::MessageType::Authentication
 			# TODO: replace this with an Error message?
 			mid = "no message id"
-			response = FileStorage::Message::Response.new mid, "Not OK", "Action on non connected user"
-			event.connection.send FileStorage::MessageType::Response.to_u8, response.to_json
+			response = FileStorage::Response.new mid, "Not OK", "Action on non connected user"
+			do_response event, response
 		end
 
 		case mtype
@@ -59,22 +59,20 @@ Context.service.not_nil!.loop do |event|
 			end
 		when .upload_request?
 			puts "Upload request"
-			request = FileStorage::Message::UploadRequest.from_json(
+			request = FileStorage::UploadRequest.from_json(
 				String.new event.message.payload
 			)
 			response = hdl_upload request, Context.users_status[userid], event
 
-			event.connection.send FileStorage::MessageType::Response.to_u8, response.to_json
-			raise "not implemented yet"
+			do_response event, response
 		when .download_request?
 			puts "Download request"
-			request = FileStorage::Message::DownloadRequest.from_json(
+			request = FileStorage::DownloadRequest.from_json(
 				String.new event.message.payload
 			)
 			response = hdl_download request, Context.users_status[userid], event
 
-			event.connection.send FileStorage::MessageType::Response.to_u8, response.to_json
-			raise "not implemented yet"
+			do_response event, response
 		when .response?
 			puts "Response message"
 			raise "not implemented yet"
@@ -90,16 +88,32 @@ Context.service.not_nil!.loop do |event|
 				raise "The user isn't recorded in the users_status structure"
 			end
 
-			transfer = FileStorage::Message::Transfer.from_json(
+			transfer = FileStorage::Transfer.from_json(
 				String.new event.message.payload
 			)
 			response = hdl_transfer transfer, Context.users_status[userid], event
 
-			event.connection.send FileStorage::MessageType::Response.to_u8, response.to_json
+			do_response event, response
 		end
 	else
 		raise "Event type not supported."
 	end
 rescue e
 	puts "A problem occured : #{e.message}"
+end
+
+def do_response(event : IPC::Event::Message,
+	response : FileStorage::Message)
+
+	case response
+	when FileStorage::Response
+		event.connection.send FileStorage::MessageType::Response.to_u8, response.to_json
+	when FileStorage::Responses
+		event.connection.send FileStorage::MessageType::Responses.to_u8, response.to_json
+	when FileStorage::Error
+		event.connection.send FileStorage::MessageType::Error.to_u8, response.to_json
+	else
+		puts "response should not happen: #{response}"
+		pp! response
+	end
 end

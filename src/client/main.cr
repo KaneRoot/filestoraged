@@ -6,8 +6,6 @@ require "base64"
 
 require "../common/filestorage.cr"
 
-alias FM = FileStorage::Message
-
 # TODO
 # For now, this example only upload files.
 # In a near future, we should be able to download files, too.
@@ -17,7 +15,7 @@ service_name = "filestorage"
 files_and_directories_to_transfer = Array(String).new
 
 # This is the requests we will send to the server
-upload_requests = Array(FM::UploadRequest).new
+upload_requests = Array(FileStorage::UploadRequest).new
 
 
 OptionParser.parse do |parser|
@@ -68,7 +66,7 @@ files_and_directories_to_transfer.each do |f|
 end
 
 files_info.values.each do |file_info|
-	upload_requests << FM::UploadRequest.new file_info
+	upload_requests << FileStorage::UploadRequest.new file_info
 end
 
 # pp! upload_requests
@@ -84,7 +82,7 @@ client = IPC::Client.new service_name
 #
 
 token = FileStorage::Token.new 1002, "karchnu"
-authentication_message = FM::Authentication.new token, upload_requests
+authentication_message = FileStorage::Authentication.new token, upload_requests
 pp! authentication_message
 client.send FileStorage::MessageType::Authentication.to_u8, authentication_message.to_json
 
@@ -96,7 +94,7 @@ m = client.read
 # puts "message received: #{m.to_s}"
 # puts "message received payload: #{String.new m.payload}"
 
-response = FM::Response.from_json(String.new m.payload)
+response = FileStorage::Response.from_json(String.new m.payload)
 
 if response.mid == authentication_message.mid
 	puts "This is a response for the authentication message"
@@ -118,7 +116,7 @@ def file_transfer(client : IPC::Client, file : File, file_info : FileStorage::Fi
 
 	while (size = file.read(buffer)) > 0
 		# transfer message = file_info, chunk count, data (will be base64'd)
-		transfer_message = FM::Transfer.new file_info, counter, buffer[0 ... size]
+		transfer_message = FileStorage::Transfer.new file_info, counter, buffer[0 ... size]
 
 		client.send FileStorage::MessageType::Transfer.to_u8, transfer_message.to_json
 		counter += 1
@@ -134,7 +132,7 @@ def file_transfer(client : IPC::Client, file : File, file_info : FileStorage::Fi
 			raise "Message received was not expected: #{mtype}"
 		end
 
-		response = FM::Response.from_json(String.new m.payload)
+		response = FileStorage::Response.from_json(String.new m.payload)
 
 		if response.mid != transfer_message.mid
 			raise "Message received has a wrong mid: #{response.mid} != #{transfer_message.mid}"

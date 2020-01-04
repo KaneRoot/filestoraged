@@ -3,63 +3,76 @@ require "dodb"
 require "base64"
 
 # reception of a file chunk
-def hdl_transfer(message : FileStorage::Message::Transfer,
+def hdl_transfer(message : FileStorage::Transfer,
 	user : User,
-	event : IPC::Event::Message) : FileStorage::Message::Response
+	event : IPC::Event::Message) : FileStorage::Response
 	puts "receiving a file"
 
-	transfer_message = FileStorage::Message::Transfer.from_json(
-		String.new event.message.payload
-	)
+	mid = message.mid
+	mid ||= "no message id"
 
-	pp! transfer_message
+	# pp! transfer_message
+
+	file_info = user.uploads.select do |v|
+		v.file.digest == message.filedigest
+	end.first.file
+
+	pp! file_info
+
+	# TODO: verify the digest
+	# TODO: store the file
+	# TODO: register the file, with its tags
 
 	# puts "chunk: #{transfer_message.chunk}"
 	# puts "data: #{Base64.decode transfer_message.data}"
 
-	FileStorage::Message::Response.new message.mid, "Ok"
+	FileStorage::Response.new mid, "Ok"
+
+rescue e
+	puts "Error handling transfer: #{e.message}"
+	FileStorage::Response.new mid.not_nil!, "Not Ok", "Unexpected error: #{e.message}"
 end
 
 # TODO
 # the client sent an upload request
-def hdl_upload(request : FileStorage::Message::UploadRequest,
+def hdl_upload(request : FileStorage::UploadRequest,
 	user : User,
-	event : IPC::Event::Message) : FileStorage::Message::Response
+	event : IPC::Event::Message) : FileStorage::Response
 
 	puts "hdl upload: mid=#{request.mid}"
 	pp! request
 
-	FileStorage::Message::Response.new request.mid, "Upload OK"
+	FileStorage::Response.new request.mid, "Upload OK"
 end
 
 # TODO
 # the client sent a download request
-def hdl_download(request : FileStorage::Message::DownloadRequest,
+def hdl_download(request : FileStorage::DownloadRequest,
 	user : User,
-	event : IPC::Event::Message) : FileStorage::Message::Response
+	event : IPC::Event::Message) : FileStorage::Response
 
 	puts "hdl download: mid=#{request.mid}"
 	pp! request
 
-	FileStorage::Message::Response.new request.mid, "Download OK"
+	FileStorage::Response.new request.mid, "Download OK"
 end
 
 
 # Entry point for request management
 # Each request should have a response.
 # Then, responses are sent in a single message.
-def hdl_requests(requests : Array(FileStorage::Message::Request),
+def hdl_requests(requests : Array(FileStorage::Request),
 	user : User,
-	event : IPC::Event::Message) : Array(FileStorage::Message::Response)
+	event : IPC::Event::Message) : Array(FileStorage::Response)
 
 	puts "hdl request"
-	responses = Array(FileStorage::Message::Response).new
+	responses = Array(FileStorage::Response).new
 
 	requests.each do |request|
 		case request
-		when FileStorage::Message::DownloadRequest
+		when FileStorage::DownloadRequest
 			responses << hdl_download request, user, event
-		when FileStorage::Message::UploadRequest
+		when FileStorage::UploadRequest
 			responses << hdl_upload request, user, event
 		else
 			raise "request not understood"
@@ -78,7 +91,7 @@ end
 def hdl_authentication(event : IPC::Event::Message)
 
 	authentication_message =
-		FileStorage::Message::Authentication.from_json(
+		FileStorage::Authentication.from_json(
 			String.new event.message.payload
 		)
 
@@ -98,7 +111,8 @@ def hdl_authentication(event : IPC::Event::Message)
 		# AuthenticationMessage includes requests.
 		new_user =
 			User.new authentication_message.token,
-				[ authentication_message.uploads, authentication_message.downloads ].flatten
+				authentication_message.uploads,
+				authentication_message.downloads
 
 		Context.connected_users[event.connection.fd] = userid
 
@@ -127,7 +141,7 @@ def hdl_authentication(event : IPC::Event::Message)
 
 	# Sending a response, containing a response for each request.
 	# The response is "Ok" when the message is well received and authorized.
-	response = FileStorage::Message::Responses.new authentication_message.mid, "Ok", responses
+	response = FileStorage::Responses.new authentication_message.mid, "Ok", responses
 	event.connection.send FileStorage::MessageType::Responses.to_u8, response.to_json
 	pp! FileStorage::MessageType::Responses.to_u8
 	pp! response

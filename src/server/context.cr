@@ -4,9 +4,12 @@
 class User
 	property uid : Int32
 	property token : FileStorage::Token
-	property requests : Array(FileStorage::Message::Request)?
+	property uploads : Array(FileStorage::UploadRequest)
+	property downloads : Array(FileStorage::DownloadRequest)
 
-	def initialize(@token, @requests = nil)
+	def initialize(@token,
+		@uploads = Array(FileStorage::UploadRequest).new,
+		@downloads = Array(FileStorage::DownloadRequest).new)
 		@uid = token.uid
 	end
 end
