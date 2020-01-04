@@ -11,7 +11,7 @@ def hdl_transfer(message : FileStorage::Transfer,
 	mid = message.mid
 	mid ||= "no message id"
 
-	# pp! transfer_message
+	# pp! message
 
 	file_info = user.uploads.select do |v|
 		v.file.digest == message.filedigest
@@ -20,11 +20,27 @@ def hdl_transfer(message : FileStorage::Transfer,
 	pp! file_info
 
 	# TODO: verify the digest
-	# TODO: store the file
-	# TODO: register the file, with its tags
 
-	# puts "chunk: #{transfer_message.chunk}"
-	# puts "data: #{Base64.decode transfer_message.data}"
+	# storage: Context.storage_directory/userid/fileuuid.bin
+	dir = "#{Context.storage_directory}/#{user.uid}"
+
+	FileUtils.mkdir_p dir
+
+	path = "#{dir}/#{file_info.digest}.bin"
+	# Create file if non existant
+	File.open(path, "a+") do |file|
+	end
+
+	# Write in it
+	File.open(path, "ab") do |file|
+		# TODO: store the file
+		offset = (message.chunk.n - 1) * FileStorage.message_buffer_size
+		file.seek(offset, IO::Seek::Set)
+		data = Base64.decode message.data
+		file.write data
+	end
+
+	# TODO: register the file with dodb, with its tags
 
 	FileStorage::Response.new mid, "Ok"
 
