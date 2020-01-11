@@ -13,11 +13,27 @@ def hdl_transfer(message : FileStorage::Transfer,
 
 	# pp! message
 
-	file_info = user.uploads.select do |v|
-		v.file.digest == message.filedigest
-	end.first.file
+	file_info = nil
+	begin
+		file_info = user.uploads.select do |v|
+			v.file.digest == message.filedigest
+		end.first.file
 
-	pp! file_info
+		pp! file_info
+	rescue e : IndexError
+		puts "No recorded upload request for file #{message.filedigest}"
+
+	rescue e
+		puts "Unexpected error: #{e}"
+	end
+
+	# Get the transfer info from the db
+	# is the file info recorded?
+	by_digest = Context.db.get_index "filedigest"
+	transfer_info = by_digest.get? message.filedigest
+
+	by_owner = Context.db.get_partition "owner"
+	pp! by_owner
 
 	# TODO: verify the digest
 
@@ -41,6 +57,8 @@ def hdl_transfer(message : FileStorage::Transfer,
 	end
 
 	# TODO: register the file with dodb, with its tags
+	
+	Context.db << 
 
 	FileStorage::Response.new mid, "Ok"
 
