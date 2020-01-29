@@ -1,4 +1,5 @@
 
+require "dodb"
 require "json"
 
 # keep track of connected users and their requests
@@ -20,31 +21,35 @@ class TransferInfo
 	include JSON::Serializable
 
 	property owner : Int32
-	property file_info : FileInfo
-	property chunks : Hash(Int32, Bool)
+	property file_info : FileStorage::FileInfo
+	property chunks : Array(Int32)
 
 	def initialize(@owner, @file_info)
-		@chunks = Hash(Int32, Bool).new
-		@file_info.nb_chunks.times do |n|
-			@chunks[n] = false
-		end
+		@chunks = [0...@file_info.nb_chunks]
 	end
 end
 
 class Context
-	class_property service_name      = "filestorage"
-	class_property storage_directory = "./storage"
+	class_property service_name        = "filestorage"
+	class_property storage_directory   = "./storage"
 	class_property file_info_directory = "./file-infos"
 
-	class_property db : DODB::DataBase(TransferInfo) = self.init_db
+	class_property db = DODB::DataBase(TransferInfo).new @@file_info_directory
 
-	def init_db
+	# search file informations by their index, owner and tags
+	class_property db_by_filedigest : DODB::Index(TransferInfo) = @@db.new_index "filedigest", &.file_info.digest
+	class_property db_by_owner : DODB::Partition(TransferInfo)  = @@db.new_partition "owner",  &.owner.to_s
+	class_property db_by_tags : DODB::Tags(TransferInfo)        = @@db.new_tags "tags",        &.file_info.tags
+
+	def self.db_reconnect
+		# In case file_info_directory changes: database reinstanciation
+
 		@@db = DODB::DataBase(TransferInfo).new @@file_info_directory
 
-		# init index, partitions and tags
-		Context.db.new_index     "filedigest", &.file_info.digest
-		Context.db.new_partition "owner",      &.owner
-		Context.db.new_tags      "tags",       &.tags
+		# recreate indexes, partitions and tags objects, too
+		@@db_by_filedigest = @@db.new_index     "filedigest", &.file_info.digest
+		@@db_by_owner      = @@db.new_partition "owner",      &.owner.to_s
+		@@db_by_tags       = @@db.new_tags      "tags",       &.file_info.tags
 	end
 
 	# list of connected users (fd => uid)

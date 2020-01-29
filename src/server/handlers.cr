@@ -3,10 +3,9 @@ require "dodb"
 require "base64"
 
 # reception of a file chunk
-def hdl_transfer(message : FileStorage::Transfer,
-	user : User,
-	event : IPC::Event::Message) : FileStorage::Response
-	puts "receiving a file"
+def hdl_transfer(message : FileStorage::Transfer, user : User) : FileStorage::Response
+
+	# We received a message containing a chunk of file.
 
 	mid = message.mid
 	mid ||= "no message id"
@@ -30,7 +29,9 @@ def hdl_transfer(message : FileStorage::Transfer,
 	# Get the transfer info from the db
 	# is the file info recorded?
 	by_digest = Context.db.get_index "filedigest"
-	transfer_info = by_digest.get? message.filedigest
+	transfer_info = by_digest.get message.filedigest
+
+	if
 
 	by_owner = Context.db.get_partition "owner"
 	pp! by_owner
