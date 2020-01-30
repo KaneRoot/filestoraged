@@ -60,7 +60,7 @@ def hdl_upload(request : FileStorage::UploadRequest, user : User) : FileStorage:
 	# TODO: verify the rights and quotas of the user
 
 	# First: check if the file already exists
-	transfer_info = Context.db_by_filedigest.get request.file.digest
+	transfer_info = Context.db_by_filedigest.get? request.file.digest
 	if transfer_info.nil?
 		# In case file informations aren't already registered
 		# which is normal at this point
