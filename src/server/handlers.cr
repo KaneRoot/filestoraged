@@ -2,6 +2,13 @@
 require "dodb"
 require "base64"
 
+require "../common/utils"
+
+# XXX TODO FIXME: architectural questions
+#   wonder why I should keep the user upload and download requests
+#   the server can be just for uploads, delegating downloads to HTTP
+
+
 # reception of a file chunk
 def hdl_transfer(message : FileStorage::Transfer, user : User) : FileStorage::Response
 
@@ -10,56 +17,25 @@ def hdl_transfer(message : FileStorage::Transfer, user : User) : FileStorage::Re
 	mid = message.mid
 	mid ||= "no message id"
 
-	# pp! message
+	# Get the transfer info from the db
+	transfer_info = Context.db_by_filedigest.get message.filedigest
 
-	file_info = nil
-	begin
-		file_info = user.uploads.select do |v|
-			v.file.digest == message.filedigest
-		end.first.file
-
-		pp! file_info
-	rescue e : IndexError
-		puts "No recorded upload request for file #{message.filedigest}"
-
-	rescue e
-		puts "Unexpected error: #{e}"
+	# TODO: if we don't have the information
+	if transfer_info.nil?
+		# TODO
 	end
 
-	# Get the transfer info from the db
-	# is the file info recorded?
-	by_digest = Context.db.get_index "filedigest"
-	transfer_info = by_digest.get message.filedigest
-
-	if
-
-	by_owner = Context.db.get_partition "owner"
-	pp! by_owner
+	# TODO: verify that the chunk sent was really missing
+	chunk_number = message.chunk.n - 1
 
 	# TODO: verify the digest
 
-	# storage: Context.storage_directory/userid/fileuuid.bin
-	dir = "#{Context.storage_directory}/#{user.uid}"
-
-	FileUtils.mkdir_p dir
-
-	path = "#{dir}/#{file_info.digest}.bin"
-	# Create file if non existant
-	File.open(path, "a+") do |file|
-	end
-
-	# Write in it
-	File.open(path, "ab") do |file|
-		# TODO: store the file
-		offset = (message.chunk.n - 1) * FileStorage.message_buffer_size
-		file.seek(offset, IO::Seek::Set)
-		data = Base64.decode message.data
-		file.write data
-	end
+	data = Base64.decode message.data
+	write_a_chunk user.uid.to_s, transfer_info.file_info, chunk_number, data
 
 	# TODO: register the file with dodb, with its tags
-	
-	Context.db << 
+
+	remove_chunk_from_db transfer_info, message.chunk.n
 
 	FileStorage::Response.new mid, "Ok"
 

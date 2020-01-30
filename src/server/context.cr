@@ -25,7 +25,7 @@ class TransferInfo
 	property chunks : Array(Int32)
 
 	def initialize(@owner, @file_info)
-		@chunks = [0...@file_info.nb_chunks]
+		@chunks = (0...@file_info.nb_chunks).to_a
 	end
 end
 
@@ -43,7 +43,6 @@ class Context
 
 	def self.db_reconnect
 		# In case file_info_directory changes: database reinstanciation
-
 		@@db = DODB::DataBase(TransferInfo).new @@file_info_directory
 
 		# recreate indexes, partitions and tags objects, too
