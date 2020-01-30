@@ -20,22 +20,26 @@ def hdl_transfer(message : FileStorage::Transfer, user : User) : FileStorage::Re
 	# Get the transfer info from the db
 	transfer_info = Context.db_by_filedigest.get message.filedigest
 
-	# TODO: if we don't have the information
 	if transfer_info.nil?
-		# TODO
+		# The user has to send an upload request before sending anything
+		# If not the case, it should be discarded
+		raise "file not recorded"
 	end
 
-	# TODO: verify that the chunk sent was really missing
-	chunk_number = message.chunk.n - 1
-
-	# TODO: verify the digest
+	chunk_number = message.chunk.n
 
 	data = Base64.decode message.data
-	write_a_chunk user.uid.to_s, transfer_info.file_info, chunk_number, data
 
-	# TODO: register the file with dodb, with its tags
+	# TODO: verify that the chunk sent was really missing
+	if transfer_info.chunks.select(chunk_number).size > 0
+		write_a_chunk user.uid.to_s, transfer_info.file_info, chunk_number, data
+	else
+		raise "non existent chunk or already uploaded"
+	end
 
-	remove_chunk_from_db transfer_info, message.chunk.n
+	remove_chunk_from_db transfer_info, chunk_number
+
+	# TODO: verify the digest, if no more chunks
 
 	FileStorage::Response.new mid, "Ok"
 
@@ -44,23 +48,45 @@ rescue e
 	FileStorage::Response.new mid.not_nil!, "Not Ok", "Unexpected error: #{e.message}"
 end
 
-# TODO
 # the client sent an upload request
-def hdl_upload(request : FileStorage::UploadRequest,
-	user : User,
-	event : IPC::Event::Message) : FileStorage::Response
+def hdl_upload(request : FileStorage::UploadRequest, user : User) : FileStorage::Response
+
+	mid = request.mid
+	mid ||= "no message id"
 
 	puts "hdl upload: mid=#{request.mid}"
 	pp! request
 
+	# TODO: verify the rights and quotas of the user
+
+	# First: check if the file already exists
+	transfer_info = Context.db_by_filedigest.get request.file.digest
+	if transfer_info.nil?
+		# In case file informations aren't already registered
+		# which is normal at this point
+		transfer_info = TransferInfo.new user.uid, request.file
+		Context.db << transfer_info
+	else
+		# File information already exists, request may be duplicated
+		# In this case: ignore the upload request
+	end
+
+	# file_info.name
+	# file_info.size
+	# file_info.nb_chunks
+	# file_info.digest
+	# file_info.tags
+
 	FileStorage::Response.new request.mid, "Upload OK"
+rescue e
+	puts "Error handling transfer: #{e.message}"
+	FileStorage::Response.new mid.not_nil!, "Not Ok", "Unexpected error: #{e.message}"
 end
 
 # TODO
 # the client sent a download request
 def hdl_download(request : FileStorage::DownloadRequest,
-	user : User,
-	event : IPC::Event::Message) : FileStorage::Response
+	user : User) : FileStorage::Response
 
 	puts "hdl download: mid=#{request.mid}"
 	pp! request
@@ -82,9 +108,9 @@ def hdl_requests(requests : Array(FileStorage::Request),
 	requests.each do |request|
 		case request
 		when FileStorage::DownloadRequest
-			responses << hdl_download request, user, event
+			responses << hdl_download request, user
 		when FileStorage::UploadRequest
-			responses << hdl_upload request, user, event
+			responses << hdl_upload request, user
 		else
 			raise "request not understood"
 		end

@@ -4,7 +4,7 @@ def remove_chunk_from_db(transfer_info : TransferInfo, chunk_number : Int32)
 	Context.db_by_filedigest.update transfer_info.file_info.digest, transfer_info
 end
 
-def write_a_chunk(userid : String, file_info : FileInfo, chunk_number : Int32, data : Bytes)
+def write_a_chunk(userid : String, file_info : FileStorage::FileInfo, chunk_number : Int32, data : Bytes)
 
 	# storage: Context.storage_directory/userid/fileuuid.bin
 	dir = "#{Context.storage_directory}/#{userid}"

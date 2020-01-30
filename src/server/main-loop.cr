@@ -62,7 +62,7 @@ Context.service.not_nil!.loop do |event|
 			request = FileStorage::UploadRequest.from_json(
 				String.new event.message.payload
 			)
-			response = hdl_upload request, Context.users_status[userid], event
+			response = hdl_upload request, Context.users_status[userid]
 
 			do_response event, response
 		when .download_request?
@@ -70,7 +70,7 @@ Context.service.not_nil!.loop do |event|
 			request = FileStorage::DownloadRequest.from_json(
 				String.new event.message.payload
 			)
-			response = hdl_download request, Context.users_status[userid], event
+			response = hdl_download request, Context.users_status[userid]
 
 			do_response event, response
 		when .response?
@@ -91,7 +91,7 @@ Context.service.not_nil!.loop do |event|
 			transfer = FileStorage::Transfer.from_json(
 				String.new event.message.payload
 			)
-			response = hdl_transfer transfer, Context.users_status[userid], event
+			response = hdl_transfer transfer, Context.users_status[userid]
 
 			do_response event, response
 		end

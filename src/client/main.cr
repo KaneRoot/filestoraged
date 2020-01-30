@@ -111,7 +111,7 @@ def file_transfer(client : IPC::Client, file : File, file_info : FileStorage::Fi
 	buffer_size = 1_000
 
 	buffer = Bytes.new buffer_size
-	counter = 1
+	counter = 0
 	size = 0
 
 	while (size = file.read(buffer)) > 0
