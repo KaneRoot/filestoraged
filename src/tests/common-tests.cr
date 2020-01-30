@@ -48,33 +48,33 @@ pp! token
 puts
 
 # for later
-requests = Array(FileStorage::Message::Request).new
+upload_requests = Array(FileStorage::UploadRequest).new
 
 # UploadRequest
 File.open(filename) do |file|
 	file_info = FileStorage::FileInfo.new file, [ "tag1", "tag2" ]
-	upload_request = FileStorage::Message::UploadRequest.new file_info
+	upload_request = FileStorage::UploadRequest.new file_info
 	pp! upload_request
-	requests << upload_request
+	upload_requests << upload_request
 end
 
 puts
 
 # DownloadRequest
-pp! FileStorage::Message::DownloadRequest.new uuid: "abc"
-pp! FileStorage::Message::DownloadRequest.new name: "the other one"
-pp! FileStorage::Message::DownloadRequest.new tags: [ "tag1", "tag2" ]
+pp! FileStorage::DownloadRequest.new filedigest: "abc"
+pp! FileStorage::DownloadRequest.new name: "the other one"
+pp! FileStorage::DownloadRequest.new tags: [ "tag1", "tag2" ]
 
 puts
 
 # AuthenticationMessage
-pp! FileStorage::Message::Authentication.new token, requests
+pp! FileStorage::Authentication.new token, upload_requests #, download_requests
 
 puts
 
 # Response
-pp! FileStorage::Message::Response.new "UUID", "Ok"
-pp! FileStorage::Message::Response.new "UUID", "Error", "Cannot store the file"
+pp! FileStorage::Response.new "Message ID", "Ok"
+pp! FileStorage::Response.new "Message ID", "Error", "Cannot store the file"
 
 puts
 
@@ -83,5 +83,5 @@ File.open(filename) do |file|
 	file_info = FileStorage::FileInfo.new file, [ "tag1", "tag2" ]
 
 	somedata = "coucou".to_slice
-	pp! FileStorage::Message::Transfer.new file_info, 1, somedata
+	pp! FileStorage::Transfer.new file_info, 1, somedata
 end
