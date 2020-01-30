@@ -58,6 +58,7 @@ def hdl_upload(request : FileStorage::UploadRequest, user : User) : FileStorage:
 	pp! request
 
 	# TODO: verify the rights and quotas of the user
+	# file_info attributes: name, size, nb_chunks, digest, tags
 
 	# First: check if the file already exists
 	transfer_info = Context.db_by_filedigest.get? request.file.digest
@@ -70,12 +71,6 @@ def hdl_upload(request : FileStorage::UploadRequest, user : User) : FileStorage:
 		# File information already exists, request may be duplicated
 		# In this case: ignore the upload request
 	end
-
-	# file_info.name
-	# file_info.size
-	# file_info.nb_chunks
-	# file_info.digest
-	# file_info.tags
 
 	FileStorage::Response.new request.mid, "Upload OK"
 rescue e
