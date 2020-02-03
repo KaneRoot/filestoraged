@@ -17,16 +17,16 @@ end
 
 token = FileStorage::Token.new 1002, "karchnu"
 
-requests = Array(FileStorage::Message::Request).new
+requests = Array(FileStorage::UploadRequest).new
 files_info.each do |file_info|
-	requests << FileStorage::Message::UploadRequest.new file_info
+	requests << FileStorage::UploadRequest.new file_info
 end
-authentication_message = FileStorage::Message::Authentication.new token, requests
+authentication_message = FileStorage::Authentication.new token, requests
 
 # TODO, TEST, DEBUG, XXX, FIXME
 pp! authentication_message.to_json
 
 
-am_from_json = FileStorage::Message::Authentication.from_json authentication_message.to_json
+am_from_json = FileStorage::Authentication.from_json authentication_message.to_json
 
 pp! am_from_json
