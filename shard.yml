@@ -9,9 +9,9 @@ description: |
 
 dependencies:
   ipc:
-    git: https://git.karchnu.fr/WeirdOS/ipc.cr
+    git: https://git.baguette.netlib.re/Baguette/ipc.cr
   dodb:
-    git: https://git.karchnu.fr/WeirdOS/dodb.cr
+    git: https://git.baguette.netlib.re/Baguette/dodb.cr
   authd:
     git: https://github.com/Lukc/authd
 
