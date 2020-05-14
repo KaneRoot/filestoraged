@@ -126,7 +126,7 @@ def file_transfer(client : IPC::Client, file : File, file_info : FileStorage::Fi
 
 		# Check for the response
 		m = client.read
-		mtype = FileStorage::MessageType.new m.type.to_i32
+		mtype = FileStorage::MessageType.new m.utype.to_i32
 		if mtype != FileStorage::MessageType::Response
 			pp! m
 			raise "Message received was not expected: #{mtype}"
