@@ -6,8 +6,6 @@ require "openssl"
 require "dodb"
 require "base64"
 
-require "../common/utils"
-
 require "./storage/*"
 
 # private function
@@ -35,17 +33,26 @@ class FileStorage::Storage
 	property db_by_owner      : DODB::Partition(TransferInfo)
 	property db_by_tags       : DODB::Tags(TransferInfo)
 
-	def initialize(storage_directory, file_info_directory)
-		@db = DODB::DataBase(TransferInfo).new @file_info_directory
+	# Where to store the data.
+	property root : String
+
+	getter user_data               : DODB::DataBase(UserData)
+	getter user_data_per_user      : DODB::Index(UserData)
+
+	def initialize(@root, file_info_directory)
+		@db = DODB::DataBase(TransferInfo).new file_info_directory
 
 		# Create indexes, partitions and tags objects.
 		@db_by_filedigest   = @db.new_index     "filedigest", &.file_info.digest
 		@db_by_owner        = @db.new_partition "owner",      &.owner.to_s
 		@db_by_tags         = @db.new_tags      "tags",       &.file_info.tags
+
+		@user_data            = DODB::DataBase(UserData).new "#{@root}/user-data"
+		@user_data_per_user   = @user_data.new_index "uid",    &.uid.to_s
 	end
 
 	# Reception of a file chunk.
-	def transfer(message : FileStorage::Transfer, user : User) : FileStorage::Response
+	def transfer(message : FileStorage::Request::Transfer, user : UserData)
 
 		# We received a message containing a chunk of file.
 		mid = message.mid
@@ -78,11 +85,11 @@ class FileStorage::Storage
 		FileStorage::Response::Transfer.new mid
 	rescue e
 		puts "Error handling transfer: #{e.message}"
-		FileStorage::Response.new mid.not_nil!, "Not Ok", "Unexpected error: #{e.message}"
+		FileStorage::Response::Error.new mid.not_nil!, "Unexpected error: #{e.message}"
 	end
 
 	# the client sent an upload request
-	def upload(request : FileStorage::Request::Upload, user : User) : FileStorage::Response
+	def upload(request : FileStorage::Request::Upload, user : UserData)
 
 		mid = request.mid
 		mid ||= "no message id"
@@ -108,12 +115,12 @@ class FileStorage::Storage
 		FileStorage::Response::Upload.new request.mid
 	rescue e
 		puts "Error handling transfer: #{e.message}"
-		FileStorage::Response.new mid.not_nil!, "Not Ok", "Unexpected error: #{e.message}"
+		FileStorage::Response::Error.new mid.not_nil!, "Unexpected error: #{e.message}"
 	end
 
 	# TODO
 	# The client sent a download request.
-	def download(request : FileStorage::DownloadRequest, user : User) : FileStorage::Response
+	def download(request : FileStorage::Request::Download, user : UserData)
 
 		puts "hdl download: mid=#{request.mid}"
 		pp! request
@@ -121,12 +128,11 @@ class FileStorage::Storage
 		FileStorage::Response::Download.new request.mid
 	end
 
-
 	# Entry point for request management
 	# Each request should have a response.
 	# Then, responses are sent in a single message.
 	def requests(requests : Array(FileStorage::Request),
-		user : User,
+		user : UserData,
 		event : IPC::Event::Message) : Array(FileStorage::Response)
 
 		puts "hdl request"
@@ -147,4 +153,50 @@ class FileStorage::Storage
 
 		responses
 	end
+
+	def remove_chunk_from_db(transfer_info : TransferInfo, chunk_number : Int32)
+		transfer_info.chunks.delete chunk_number
+		@db_by_filedigest.update transfer_info.file_info.digest, transfer_info
+	end
+
+	def write_a_chunk(userid : String,
+		file_info : FileStorage::FileInfo,
+		chunk_number : Int32,
+		data : Bytes)
+
+		# storage: @root/files/userid/fileuuid.bin
+		dir = "#{@root}/files/#{userid}"
+
+		FileUtils.mkdir_p dir
+
+		path = "#{dir}/#{file_info.digest}.bin"
+		# Create file if non existant
+		File.open(path, "a+") do |file|
+		end
+
+		# Write in it
+		File.open(path, "ab") do |file|
+			offset = chunk_number * FileStorage.message_buffer_size
+			file.seek(offset, IO::Seek::Set)
+			file.write data
+		end
+	end
 end
+
+###	# TODO:
+###	#   why getting the file_info here? We could check for the transfer_info right away
+###	#   it has more info, and we'll get it later eventually
+###
+###	file_info = nil
+###	begin
+###		file_info = user.uploads.select do |v|
+###			v.file.digest == message.filedigest
+###		end.first.file
+###
+###		pp! file_info
+###	rescue e : IndexError
+###		puts "No recorded upload request for file #{message.filedigest}"
+###
+###	rescue e
+###		puts "Unexpected error: #{e}"
+###	end

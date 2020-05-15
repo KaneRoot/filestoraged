@@ -8,7 +8,7 @@ class FileStorage::Request
 		end
 
 		def handle(filestoraged : FileStorage::Service, event : IPC::Event::Events)
-			user = altideald.get_logged_user event
+			user = filestoraged.get_logged_user event
 
 			raise Exception.new "unauthorized" if user.nil?
 
@@ -17,7 +17,7 @@ class FileStorage::Request
 
 			user_data = filestoraged.get_user_data user.uid
 
-			filestoraged.storage.upload self, event
+			filestoraged.storage.upload self, user_data
 		rescue e
 			return Response::Error.new @mid, "unauthorized"
 		end
@@ -49,15 +49,13 @@ class FileStorage::Response
 		end
 	end
 
-	JSONIPC.request Responses, 100 do
-		include JSON::Serializable
-
-		property mid       : String
-		property responses : Array(Response)   # a response for each request
-		property response  : String
-		property reason    : String?
-
-		def initialize(@mid, @response, @responses, @reason = nil)
-		end
-	end
+#	JSONIPC.request Responses, 100 do
+#		property mid       : String
+#		property responses : Array(Response)   # a response for each request
+#		property response  : String
+#		property reason    : String?
+#
+#		def initialize(@mid, @response, @responses, @reason = nil)
+#		end
+#	end
 end

@@ -3,6 +3,10 @@ require "ipc"
 require "json"
 require "authd"
 
+require "colorize"
+
+require "weird-crystal-base"
+
 require "../common/colors"
 # require "../common/filestorage.cr"
 
@@ -42,7 +46,7 @@ class FileStorage::Service < IPC::Service
 
 	# users_status: keep track of the users' status even if they are disconnected,
 	#               allowing the application to handle connection problems.
-	property users_status = Hash(Int32, User).new
+	property users_status : Hash(Int32, UserData) = Hash(Int32, UserData).new
 
 	# Actual storage.
 	getter storage             : FileStorage::Storage

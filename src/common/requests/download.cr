@@ -10,7 +10,7 @@ class FileStorage::Request
 		end
 
 		def handle(filestoraged : FileStorage::Service, event : IPC::Event::Events)
-			user = altideald.get_logged_user event
+			user = filestoraged.get_logged_user event
 
 			raise Exception.new "unauthorized" if user.nil?
 
@@ -19,7 +19,7 @@ class FileStorage::Request
 
 			user_data = filestoraged.get_user_data user.uid
 
-			filestoraged.storage.download self, event
+			filestoraged.storage.download self, user_data
 		rescue e
 			return Response::Error.new @mid, "unauthorized"
 		end
