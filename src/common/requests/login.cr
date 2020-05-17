@@ -5,8 +5,10 @@ require "base64"
 
 class FileStorage::Request
 	JSONIPC.request Login, 0 do
-		property mid : String
+		property mid : String = ""
+
 		property token : String
+
 		def initialize(@token)
 			@mid = UUID.random.to_s
 		end
