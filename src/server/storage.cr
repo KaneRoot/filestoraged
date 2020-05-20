@@ -82,7 +82,8 @@ class FileStorage::Storage
 
 		# TODO: verify the digest, if no more chunks.
 
-		FileStorage::Response::Transfer.new mid, chunk_number
+		digest = transfer_info.file_info.digest
+		FileStorage::Response::Transfer.new mid, digest, chunk_number
 	rescue e
 		puts "Error handling transfer: #{e.message}"
 		FileStorage::Response::Error.new mid.not_nil!, "Unexpected error: #{e.message}"
