@@ -182,21 +182,3 @@ class FileStorage::Storage
 		end
 	end
 end
-
-###	# TODO:
-###	#   why getting the file_info here? We could check for the transfer_info right away
-###	#   it has more info, and we'll get it later eventually
-###
-###	file_info = nil
-###	begin
-###		file_info = user.uploads.select do |v|
-###			v.file.digest == message.filedigest
-###		end.first.file
-###
-###		pp! file_info
-###	rescue e : IndexError
-###		puts "No recorded upload request for file #{message.filedigest}"
-###
-###	rescue e
-###		puts "Unexpected error: #{e}"
-###	end
