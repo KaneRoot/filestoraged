@@ -112,9 +112,10 @@ class FileStorage::Storage
 			# In this case: ignore the upload request
 		end
 
-		FileStorage::Response::Upload.new request.mid
+		path = "/files/#{user.uid}/#{request.file.digest}.bin"
+		FileStorage::Response::Upload.new request.mid, path
 	rescue e
-		puts "Error handling transfer: #{e.message}"
+		puts "Error handling upload: #{e.message}"
 		FileStorage::Response::Error.new mid.not_nil!, "Unexpected error: #{e.message}"
 	end
 

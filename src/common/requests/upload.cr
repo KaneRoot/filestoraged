@@ -45,7 +45,8 @@ end
 class FileStorage::Response
 	JSONIPC.request Upload, 20 do
 		property mid : String
-		def initialize(@mid)
+		property path : String
+		def initialize(@mid, @path)
 		end
 	end
 
