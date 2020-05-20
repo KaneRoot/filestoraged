@@ -56,7 +56,8 @@ end
 class FileStorage::Response
 	JSONIPC.request Transfer, 40 do
 		property mid : String
-		def initialize(@mid)
+		property n : Int32    # chunk number
+		def initialize(@mid, @n)
 		end
 	end
 end
