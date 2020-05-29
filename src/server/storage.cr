@@ -71,10 +71,11 @@ class FileStorage::Storage
 
 		data = Base64.decode message.data
 
-		# TODO: verify that the chunk sent was really missing.
-		if transfer_info.chunks.select(chunk_number).size > 0
+		# Verify that the chunk sent was really missing.
+		if transfer_info.chunks.select do |v| v == chunk_number end.size == 1
 			write_a_chunk user.uid.to_s, transfer_info.file_info, chunk_number, data
 		else
+			# TODO: send the remaining chunks to upload.
 			raise "non existent chunk or already uploaded"
 		end
 
