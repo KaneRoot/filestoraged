@@ -1,0 +1,45 @@
+class FileStorage
+	def self.message_buffer_size
+	def self.file_reading_buffer_size
+	def self.data_digest(data : Bytes)
+	def self.file_digest(file : File)
+end
+
+class FileStorage::Chunk
+	n      : Int32   # chunk's number
+	on     : Int32   # number of chunks
+	digest : String  # digest of the current chunk
+
+	initialize(@n, @on, data)
+end
+
+class FileStorage::FileInfo
+	name      : String
+	size      : UInt64
+	nb_chunks : Int32
+	digest    : String
+	tags      : Array(String)
+end
+
+class TransferInfo
+	owner : Int32
+	file_info : FileStorage::FileInfo
+	chunks : Array(Int32)
+
+	initialize(@owner, @file_info)
+end
+
+# Keep track of connected users and their requests.
+class FileStorage::UserData
+	property uid       : Int32
+	property uploads   : Array(Upload)   # NOT USED.
+	property downloads : Array(Download) # NOT USED.
+
+	initialize(@uid, @uploads = Array(Upload).new, @downloads = Array(Download).new)
+end
+
+root/
+	files/ : actual files
+	meta/  : DODB TransferInfo
+	users/ : DODP UserData (for later use: quotas, rights)
+

@@ -36,6 +36,7 @@ end
 class FileStorage
 	class_getter requests  = [] of JSONIPC.class
 	class_getter responses = [] of JSONIPC.class
+	class_getter errors    = [] of JSONIPC.class
 end
 
 class FileStorage::Client < IPC::Client

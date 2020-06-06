@@ -25,23 +25,6 @@ class FileStorage::Request
 	FileStorage.requests << Upload
 end
 
-class FileStorage::Client
-	def upload(token : String)
-		request = FileStorage::Request::Upload.new token
-		send request
-
-		response = parse_message [ FileStorage::Response::Upload, FileStorage::Response::Error ], read
-
-		case response
-		when FileStorage::Response::Upload
-		when FileStorage::Response::Error
-			raise "Upload request failed: #{response.reason}"
-		end
-
-		response
-	end
-end
-
 class FileStorage::Response
 	JSONIPC.request Upload, 20 do
 		property mid : String
@@ -49,10 +32,11 @@ class FileStorage::Response
 		def initialize(@mid, @path)
 		end
 	end
+	FileStorage.responses << Upload
 
 #	JSONIPC.request Responses, 100 do
 #		property mid       : String
-#		property responses : Array(Response)   # a response for each request
+#		property responses : Array(Response | Errors)   # a response for each request
 #		property response  : String
 #		property reason    : String?
 #

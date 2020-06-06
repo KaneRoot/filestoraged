@@ -19,23 +19,14 @@ require "../common/colors"
 #          upload or download its files.
 
 # TODO:
-# * Authd integration.
 # * Elegantly handling errors.
-# * Store the file, /files/userid/UID.bin for example: /files/1002/UID.bin.
-# * Metadata should be in a dodb.
-#   /storage/partitions/by_uid/UID.json -> content:
-#     data: /files/uid/UID.bin (storing raw files)
-#     uid: 1002
-#     name: "The File About Things"
-#     size: 1500
-#     tags: thing1 thing2
+# * Store the file, @root/files/UID for example: ./files/UID.
 # * Knowing which parts of the files are still to be sent.
 # * Rights.
 # * Quotas.
 
 require "./storage.cr"
 require "./network.cr"
-####  require "./sample.cr"
 
 require "dodb"
 require "json"
@@ -58,12 +49,9 @@ class FileStorage::Service < IPC::Service
 	@auth : AuthD::Client
 	@auth_key : String
 
-	def initialize(storage_directory, file_info_directory, @auth_key)
-		# Data and metadata storage directories.
-		# storage_directory   : String
-		# file_info_directory : String
-
-		@storage = FileStorage::Storage.new storage_directory, file_info_directory
+	def initialize(storage_directory, @auth_key)
+		# Data and metadata storage directory.
+		@storage = FileStorage::Storage.new storage_directory
 
 		@logged_users       = Hash(Int32, AuthD::User::Public).new
 		@logged_connections = Hash(Int32, IPC::Connection).new
@@ -164,13 +152,13 @@ class FileStorage::Service < IPC::Service
 					info "<< #{request.class.name.sub /^FileStorage::Request::/, ""}"
 
 					response = request.handle self, event
+					response_type = response.class.name
 
-					if response.is_a? FileStorage::Response::Error
-						warning ">> #{response.class.name.sub /^FileStorage::Response::/, ""} (#{response.reason})"
+					if response.responds_to?(:reason)
+						warning ">> #{response_type.sub /^FileStorage::Errors::/, ""} (#{response.reason})"
 					else
 						info ">> #{response.class.name.sub /^FileStorage::Response::/, ""}"
 					end
-
 
 					#################################################################
 					# THERE START
@@ -229,7 +217,7 @@ class FileStorage::Service < IPC::Service
 #							raise "The user isn't recorded in the users_status structure"
 #						end
 #
-#						transfer = FileStorage::Transfer.from_json(
+#						transfer = FileStorage::PutChunk.from_json(
 #							String.new event.message.payload
 #						)
 #						response = hdl_transfer transfer, Context.users_status[userid]
@@ -254,10 +242,6 @@ class FileStorage::Service < IPC::Service
 					warning "unhandled IPC event: #{event.class}"
 				end
 
-				# TODOOOOOOOOOO TODO FIXME
-
-
-
 			rescue exception
 				error "exception: #{typeof(exception)} - #{exception.message}"
 			end
@@ -265,23 +249,16 @@ class FileStorage::Service < IPC::Service
 	end
 
 	def self.from_cli
-		storage_directory = "file-data-storage"
-		file_info_directory = "file-info-storage"
+		storage_directory = "files/"
 		key = "nico-nico-nii" # Default authd key, as per the specs. :eyes:
 
 		OptionParser.parse do |parser|
 			parser.banner = "usage: filestoraged [options]"
 
-			parser.on "-d storage-directory",
-				"--storage-directory storage-directory",
-				"The directory where to put uploaded files." do |opt|
+			parser.on "-r root-directory",
+				"--root-directory dir",
+				"The root directory for FileStoraged." do |opt|
 				storage_directory = opt
-			end
-
-			parser.on "-m metadata-directory",
-				"--metadata-directory storage-directory",
-				"The directory where to put metadata of uploaded files." do |opt|
-				file_info_directory = opt
 			end
 
 			parser.on "-h",
@@ -299,25 +276,8 @@ class FileStorage::Service < IPC::Service
 			end
 		end
 
-		::FileStorage::Service.new storage_directory, file_info_directory, key
+		::FileStorage::Service.new storage_directory, key
 	end
-
-	# TODO: this will probably be dropped at some point.
-#	def do_response(event : IPC::Event::Message,
-#		response : FileStorage::Message)
-#
-#		case response
-#		when FileStorage::Response
-#			event.connection.send FileStorage::MessageType::Response.to_u8, response.to_json
-#		when FileStorage::Responses
-#			event.connection.send FileStorage::MessageType::Responses.to_u8, response.to_json
-#		when FileStorage::Error
-#			event.connection.send FileStorage::MessageType::Error.to_u8, response.to_json
-#		else
-#			puts "response should not happen: #{response}"
-#			pp! response
-#		end
-#	end
 end
 
 FileStorage::Service.from_cli.run

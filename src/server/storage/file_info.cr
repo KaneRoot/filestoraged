@@ -24,7 +24,6 @@ class FileStorage
 
 	# private function
 	def self.data_digest(data : Bytes)
-
 		iodata = IO::Memory.new data, false
 		buffer = Bytes.new FileStorage.file_reading_buffer_size
 

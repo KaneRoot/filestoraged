@@ -27,28 +27,11 @@ class FileStorage::Request
 	FileStorage.requests << Download
 end
 
-class FileStorage::Client
-	def download(filedigest = nil, name = nil, tags = nil)
-		request = FileStorage::Request::Download.new filedigest, name, tags
-		send request
-
-		response = parse_message [ FileStorage::Response::Download, FileStorage::Response::Error ], read
-
-		case response
-		when FileStorage::Response::Download
-		when FileStorage::Response::Error
-			raise "Download request denied: #{response.reason}"
-		end
-
-		response
-	end
-end
-
-
 class FileStorage::Response
 	JSONIPC.request Download, 30 do
-		property mid : String
-		def initialize(@mid)
+		property mid       : String
+		property nb_chunks : Int32
+		def initialize(@mid, @nb_chunks)
 		end
 	end
 end

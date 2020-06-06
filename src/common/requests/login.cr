@@ -34,24 +34,6 @@ class FileStorage::Request
 	FileStorage.requests << Login
 end
 
-class FileStorage::Client
-	def login(token : String)
-		request = FileStorage::Request::Login.new token
-		send request
-
-		response = parse_message [ FileStorage::Response::Login, FileStorage::Response::Error ], read
-
-		case response
-		when FileStorage::Response::Login
-			# Received favorites, likes, etc.
-		when FileStorage::Response::Error
-			raise "user was not logged in: #{response.reason}"
-		end
-
-		response
-	end
-end
-
 class FileStorage::Response
 	JSONIPC.request Login, 5 do
 		property mid : String
