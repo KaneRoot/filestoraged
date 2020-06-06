@@ -20,7 +20,7 @@ class FileStorage::Request
 		def handle(filestoraged : FileStorage::Service, event : IPC::Event::Events)
 			user = filestoraged.get_logged_user event
 
-			raise Exception.new "unauthorized" if user.nil?
+			return Errors::Authorization.new @mid if user.nil?
 
 			# FIXME: Maybe this should be moved to FileStorage::Service
 			fd = event.connection.fd
@@ -46,7 +46,7 @@ class FileStorage::Request
 		def handle(filestoraged : FileStorage::Service, event : IPC::Event::Events)
 			user = filestoraged.get_logged_user event
 
-			raise Exception.new "unauthorized" if user.nil?
+			return Errors::Authorization.new @mid if user.nil?
 
 			# FIXME: Maybe this should be moved to FileStorage::Service
 			fd = event.connection.fd

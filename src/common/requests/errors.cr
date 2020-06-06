@@ -7,8 +7,16 @@ class FileStorage::Errors
 	end
 	FileStorage.errors << GenericError
 
+	JSONIPC.request Authorization, 201 do
+		property mid    : String
+		property reason : String
+		def initialize(@mid, @reason = "authorization")
+		end
+	end
+	FileStorage.errors << Authorization
+
 	# When uploading a chunk already present in the DB.
-	JSONIPC.request ChunkAlreadyUploaded, 201 do
+	JSONIPC.request ChunkAlreadyUploaded, 202 do
 		property mid        : String
 		property reason     = "Chunk already present"
 		property filedigest : String
@@ -20,7 +28,7 @@ class FileStorage::Errors
 	FileStorage.errors << ChunkAlreadyUploaded
 
 	# You upload a chunk, but you are not the owner of the file.
-	JSONIPC.request ChunkUploadDenied, 202 do
+	JSONIPC.request ChunkUploadDenied, 203 do
 		property mid        : String
 		property reason     = "This file is not yours"
 		property filedigest : String
@@ -31,7 +39,7 @@ class FileStorage::Errors
 	FileStorage.errors << ChunkUploadDenied
 
 	# When uploading a file already present in the DB.
-	JSONIPC.request FileExists, 203 do
+	JSONIPC.request FileExists, 204 do
 		property mid        : String
 		property reason     = "file already present"
 		property filedigest : String
@@ -42,7 +50,7 @@ class FileStorage::Errors
 	FileStorage.errors << FileExists
 
 	# When transfering a chunk for an inexistent file.
-	JSONIPC.request FileDoesNotExist, 204 do
+	JSONIPC.request FileDoesNotExist, 205 do
 		property mid        : String
 		property reason     = "file does not exist"
 		property filedigest : String
