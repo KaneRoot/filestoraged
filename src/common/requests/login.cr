@@ -28,7 +28,7 @@ class FileStorage::Request
 
 			return Response::Login.new @mid
 		rescue e
-			return Response::Error.new @mid, "unauthorized"
+			return Errors::GenericError.new @mid, "unauthorized"
 		end
 	end
 	FileStorage.requests << Login

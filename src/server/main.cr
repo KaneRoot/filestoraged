@@ -157,7 +157,7 @@ class FileStorage::Service < IPC::Service
 					if response.responds_to?(:reason)
 						warning ">> #{response_type.sub /^FileStorage::Errors::/, ""} (#{response.reason})"
 					else
-						info ">> #{response.class.name.sub /^FileStorage::Response::/, ""}"
+						info ">> #{response_type.sub /^FileStorage::Response::/, ""}"
 					end
 
 					#################################################################

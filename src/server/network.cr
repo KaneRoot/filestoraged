@@ -45,21 +45,6 @@ class FileStorage::Client < IPC::Client
 	end
 end
 
-class FileStorage::Response
-	JSONIPC.request Error, 0 do
-		property mid : String
-		property reason : String | Array(String)
-
-		def initialize(@mid, @reason)
-		end
-	end
-	JSONIPC.request Success, 1 do
-		property mid : String
-		def initialize(@mid)
-		end
-	end
-end
-
 def parse_message(requests : Array(JSONIPC.class), message : IPC::Message) : JSONIPC?
 	request_type = requests.find &.type.==(message.utype)
 

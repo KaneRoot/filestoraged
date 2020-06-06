@@ -19,7 +19,7 @@ class FileStorage::Request
 
 			filestoraged.storage.upload self, user_data
 		rescue e
-			return Response::Error.new @mid, "unauthorized"
+			return Errors::GenericError.new @mid, e.to_s
 		end
 	end
 	FileStorage.requests << Upload
