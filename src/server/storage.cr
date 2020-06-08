@@ -46,7 +46,7 @@ class FileStorage::Storage
 	# - users/ : DODB UserData (for later use: quotas, rights)
 
 	def initialize(@root)
-		@db = DODB::DataBase(TransferInfo).new "'#{@root}/meta"
+		@db = DODB::DataBase(TransferInfo).new "#{@root}/meta"
 
 		# Where to store uploaded files.
 		FileUtils.mkdir_p "#{@root}/files"

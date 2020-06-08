@@ -19,6 +19,8 @@ class FileStorage::FileInfo
 	nb_chunks : Int32
 	digest    : String
 	tags      : Array(String)
+
+	initialize(file : File, tags = nil)
 end
 
 class TransferInfo
@@ -35,7 +37,8 @@ class FileStorage::UserData
 	property uploads   : Array(Upload)   # NOT USED.
 	property downloads : Array(Download) # NOT USED.
 
-	initialize(@uid, @uploads = Array(Upload).new, @downloads = Array(Download).new)
+	initialize(@uid, @uploads = Array(Upload).new,
+		@downloads = Array(Download).new)
 end
 
 root/

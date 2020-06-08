@@ -1,63 +1,105 @@
+require "ipc"
 
-class FileStorage::Client
+class FileStorage::Client < IPC::Client
+	property auth_token : String
 
-	def login(token : String)
-		request = FileStorage::Request::Login.new token
+	def initialize(@auth_token, service_name = "filestorage")
+		super service_name
+	end
+
+	def login
+		request = FileStorage::Request::Login.new auth_token
 		send request
 
-		response = parse_message [ FileStorage::Response::Login, FileStorage::Response::Error ], read
+		response = parse_message [
+			FileStorage::Response::Login,
+			FileStorage::Errors::GenericError
+			], read
 
-		case response
-		when FileStorage::Response::Login
-			# Received favorites, likes, etc.
-		when FileStorage::Response::Error
-			raise "user was not logged in: #{response.reason}"
+		if response.responds_to? :mid
+			if request.mid != response.mid
+				raise "mid from response != request"
+			end
+		else
+			raise "response doen't even have mid"
 		end
 
 		response
 	end
 
-	def transfer(file_info : FileInfo, count, bindata)
-		request = FileStorage::Request::PutChunk.new file_info, count, bindata
-		send request
+	def get_file_info(file_path : String)
+		file_info : FileStorage::FileInfo
+		file = File.open(file_path)
+		file_info = FileStorage::FileInfo.new file
+		file.close
+		file_info.not_nil!
+	end
 
-		response = parse_message [ FileStorage::Response::PutChunk, FileStorage::Response::Error ], read
+	def transfer(file_path : String)
+		file_info = get_file_info file_path
 
-		case response
-		when FileStorage::Response::PutChunk
-		when FileStorage::Response::Error
-			raise "File chunk was not transfered: #{response.reason}"
+		File.open(file_path) do |file|
+			buffer_size = FileStorage.message_buffer_size
+
+			buffer = Bytes.new buffer_size
+			counter = 0
+			size = 0
+
+			while (size = file.read(buffer)) > 0
+				puts "loop !!!"
+				# transfer message = file_info, chunk count, data (will be base64'd)
+				transfer_message = FileStorage::Request::PutChunk.new file_info,
+					counter,
+					buffer[0 ... size]
+
+				send transfer_message
+				counter += 1
+
+				buffer = Bytes.new buffer_size
+
+				# Check for the response
+				response = parse_message [
+						FileStorage::Response::PutChunk,
+						FileStorage::Errors::GenericError
+					], read
+
+				if response.responds_to? :mid
+					if response.mid != transfer_message.mid
+						raise "request and response mid !=: #{response.mid} != #{transfer_message.mid}"
+					else
+						pp! response
+					end
+				else
+					raise "response doesn't have mid"
+				end
+			end
 		end
-
-		response
 	end
 
 	def download(filedigest = nil, name = nil, tags = nil)
 		request = FileStorage::Request::Download.new filedigest, name, tags
 		send request
 
-		response = parse_message [ FileStorage::Response::Download, FileStorage::Response::Error ], read
-
-		case response
-		when FileStorage::Response::Download
-		when FileStorage::Response::Error
-			raise "Download request denied: #{response.reason}"
-		end
+		response = parse_message [
+			FileStorage::Response::Download,
+			FileStorage::Errors::GenericError
+			], read
 
 		response
 	end
 
-	def upload(token : String)
-		request = FileStorage::Request::Upload.new token
-		send request
-
-		response = parse_message [ FileStorage::Response::Upload, FileStorage::Response::Error ], read
-
-		case response
-		when FileStorage::Response::Upload
-		when FileStorage::Response::Error
-			raise "Upload request failed: #{response.reason}"
+	def upload(file : String)
+		file_info : FileStorage::FileInfo
+		File.open(file) do |f|
+			file_info = FileStorage::FileInfo.new f
+			request = FileStorage::Request::Upload.new file_info
+			send request
 		end
+
+		response = parse_message [
+			FileStorage::Response::Upload,
+			FileStorage::Errors::GenericError
+			], read
 
 		response
 	end
