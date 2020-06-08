@@ -105,8 +105,9 @@ class FileStorage::Storage
 		if transfer_info.chunks.select do |v| v == chunk_number end.size == 1
 			write_a_chunk file_digest, chunk_size, chunk_number, data
 		else
-			# TODO: send the remaining chunks to upload.
-			raise "non existent chunk or already uploaded"
+			# Send the next remaining chunk to upload.
+			next_chunk = transfer_info.chunks.sort.first
+			return FileStorage::Errors::ChunkAlreadyUploaded.new mid, file_digest, next_chunk
 		end
 
 		remove_chunk_from_db transfer_info, chunk_number

@@ -20,9 +20,9 @@ class FileStorage::Errors
 		property mid        : String
 		property reason     = "Chunk already present"
 		property filedigest : String
-		property chunk      : Chunk
+		property next_chunk : Int32
 
-		def initialize(@mid, @filedigest, @chunk)
+		def initialize(@mid, @filedigest, @next_chunk)
 		end
 	end
 	FileStorage.errors << ChunkAlreadyUploaded
