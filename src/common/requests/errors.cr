@@ -43,8 +43,9 @@ class FileStorage::Errors
 		property mid        : String
 		property reason     = "file already present"
 		property filedigest : String
+		property next_chunk : Int32
 
-		def initialize(@mid, @filedigest)
+		def initialize(@mid, @filedigest, @next_chunk)
 		end
 	end
 	FileStorage.errors << FileExists
@@ -59,4 +60,15 @@ class FileStorage::Errors
 		end
 	end
 	FileStorage.errors << FileDoesNotExist
+
+	# When a file was already fully uploaded.
+	JSONIPC.request FileFullyUploaded, 206 do
+		property mid        : String
+		property reason     = "file already uploaded fully"
+		property filedigest : String
+
+		def initialize(@mid, @filedigest)
+		end
+	end
+	FileStorage.errors << FileFullyUploaded
 end

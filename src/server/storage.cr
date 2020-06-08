@@ -105,9 +105,14 @@ class FileStorage::Storage
 		if transfer_info.chunks.select do |v| v == chunk_number end.size == 1
 			write_a_chunk file_digest, chunk_size, chunk_number, data
 		else
-			# Send the next remaining chunk to upload.
-			next_chunk = transfer_info.chunks.sort.first
-			return FileStorage::Errors::ChunkAlreadyUploaded.new mid, file_digest, next_chunk
+			begin
+				# Send the next remaining chunk to upload.
+				next_chunk = transfer_info.chunks.sort.first
+				return FileStorage::Errors::ChunkAlreadyUploaded.new mid, file_digest, next_chunk
+			rescue e : IndexError
+				# In case the file was completely uploaded already.
+				return FileStorage::Errors::FileFullyUploaded.new mid, file_digest
+			end
 		end
 
 		remove_chunk_from_db transfer_info, chunk_number
@@ -185,7 +190,13 @@ class FileStorage::Storage
 		else
 			# File information already exists, request may be duplicated,
 			# in this case: ignore the upload request.
-			return FileStorage::Errors::FileExists.new mid, file_digest
+			begin
+				next_chunk = transfer_info.chunks.sort.first
+				return FileStorage::Errors::FileExists.new mid, file_digest, next_chunk
+			rescue e : IndexError
+				# In case the file was completely uploaded already.
+				return FileStorage::Errors::FileFullyUploaded.new mid, file_digest
+			end
 		end
 
 		# TODO: store upload request in UserData?
