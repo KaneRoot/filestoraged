@@ -108,9 +108,11 @@ class FileStorage::Storage
 		else
 			begin
 				# Send the next remaining chunk to upload.
-				next_chunk = transfer_info.chunks.sort.first
-				return FileStorage::Errors::ChunkAlreadyUploaded.new mid, file_digest, next_chunk
-			rescue e : IndexError
+				chunks = transfer_info.chunks
+				if chunks.size != 0
+					next_chunk = transfer_info.chunks.sort.first
+					return FileStorage::Errors::ChunkAlreadyUploaded.new mid, file_digest, next_chunk
+				end
 				# In case the file was completely uploaded already.
 				return FileStorage::Errors::FileFullyUploaded.new mid, path
 			rescue e
@@ -188,16 +190,21 @@ class FileStorage::Storage
 		# First: check if the file already exists.
 		transfer_info = @db_by_filedigest.get? file_digest
 		if transfer_info.nil?
+			puts "new file: #{file_digest}"
+
 			# In case file informations aren't already registered
 			# which is normal at this point.
 			@db << TransferInfo.new user.uid, request.file
 		else
+			puts "file already upload (at least partially): #{file_digest}"
 			# File information already exists, request may be duplicated,
 			# in this case: ignore the upload request.
 			begin
-				next_chunk = transfer_info.chunks.sort.first
-				return FileStorage::Errors::FileExists.new mid, path, next_chunk
-			rescue e : IndexError
+				chunks = transfer_info.chunks
+				if chunks.size != 0
+					next_chunk = chunks.sort.first
+					return FileStorage::Errors::FileExists.new mid, path, next_chunk
+				end
 				# In case the file was completely uploaded already.
 				return FileStorage::Errors::FileFullyUploaded.new mid, path
 			rescue e

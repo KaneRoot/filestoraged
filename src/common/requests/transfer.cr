@@ -27,6 +27,8 @@ class FileStorage::Request
 
 			user_data = filestoraged.get_user_data user.uid
 
+			puts "PutChunk request: #{@mid}, file #{@filedigest}, chunk: n=#{@chunk.n}, on=#{@chunk.on}, digest={@chunk.digest}"
+
 			filestoraged.storage.write_chunk self, user_data
 		rescue e
 			return Errors::GenericError.new @mid, e.to_s
