@@ -112,6 +112,9 @@ class FileStorage::Storage
 			rescue e : IndexError
 				# In case the file was completely uploaded already.
 				return FileStorage::Errors::FileFullyUploaded.new mid, file_digest
+			rescue e
+				puts "error during transfer_info.chunks.sort.first"
+				raise e
 			end
 		end
 
@@ -192,7 +195,7 @@ class FileStorage::Storage
 			# in this case: ignore the upload request.
 			begin
 				next_chunk = transfer_info.chunks.sort.first
-				return FileStorage::Errors::FileExists.new mid, file_digest, next_chunk
+				return FileStorage::Errors::FileExists.new mid, path, next_chunk
 			rescue e : IndexError
 				# In case the file was completely uploaded already.
 				return FileStorage::Errors::FileFullyUploaded.new mid, file_digest

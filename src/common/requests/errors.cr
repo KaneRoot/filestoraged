@@ -42,10 +42,10 @@ class FileStorage::Errors
 	JSONIPC.request FileExists, 204 do
 		property mid        : String
 		property reason     = "file already present"
-		property filedigest : String
+		property path       : String
 		property next_chunk : Int32
 
-		def initialize(@mid, @filedigest, @next_chunk)
+		def initialize(@mid, @path, @next_chunk)
 		end
 	end
 	FileStorage.errors << FileExists
