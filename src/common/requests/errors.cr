@@ -65,9 +65,9 @@ class FileStorage::Errors
 	JSONIPC.request FileFullyUploaded, 206 do
 		property mid        : String
 		property reason     = "file already uploaded fully"
-		property filedigest : String
+		property path       : String
 
-		def initialize(@mid, @filedigest)
+		def initialize(@mid, @path)
 		end
 	end
 	FileStorage.errors << FileFullyUploaded

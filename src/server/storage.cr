@@ -100,6 +100,7 @@ class FileStorage::Storage
 		chunk_size = FileStorage.message_buffer_size
 		chunk_number = message.chunk.n
 		data = Base64.decode message.data
+		path = get_path file_digest
 
 		# Verify that the chunk sent was really missing.
 		if transfer_info.chunks.select do |v| v == chunk_number end.size == 1
@@ -111,7 +112,7 @@ class FileStorage::Storage
 				return FileStorage::Errors::ChunkAlreadyUploaded.new mid, file_digest, next_chunk
 			rescue e : IndexError
 				# In case the file was completely uploaded already.
-				return FileStorage::Errors::FileFullyUploaded.new mid, file_digest
+				return FileStorage::Errors::FileFullyUploaded.new mid, path
 			rescue e
 				puts "error during transfer_info.chunks.sort.first"
 				raise e
@@ -198,7 +199,10 @@ class FileStorage::Storage
 				return FileStorage::Errors::FileExists.new mid, path, next_chunk
 			rescue e : IndexError
 				# In case the file was completely uploaded already.
-				return FileStorage::Errors::FileFullyUploaded.new mid, file_digest
+				return FileStorage::Errors::FileFullyUploaded.new mid, path
+			rescue e
+				puts "error at transfer_info.chunks.sort.first in upload"
+				raise e
 			end
 		end
 
