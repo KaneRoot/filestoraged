@@ -9,7 +9,7 @@ class JSONIPC
 
 	property     id   : JSON::Any?
 
-	def handle(service : IPC::Service, event : IPC::Event::Events)
+	def handle(service : IPC::Server, event : IPC::Event::Events)
 		raise "unimplemented"
 	end
 
@@ -27,9 +27,9 @@ class JSONIPC
 	end
 end
 
-class IPC::Connection
-	def send(request : JSONIPC)
-		send request.type.to_u8, request.to_json
+class IPC::Context
+	def send(fd : Int32, request : JSONIPC)
+		send fd, request.type.to_u8, request.to_json
 	end
 end
 
