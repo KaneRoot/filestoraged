@@ -35,7 +35,7 @@
 #			if filestoraged.users_status[userid]?
 #				puts "We already knew this user"
 #
-#				filestoraged.connected_users[event.connection.fd] = userid
+#				filestoraged.connected_users[event.fd] = userid
 #				# TODO
 #				pp! filestoraged.connected_users
 #				pp! filestoraged.users_status[userid]
@@ -47,7 +47,7 @@
 #				# AuthenticationMessage includes requests.
 #				new_user = User.new token, @uploads, @downloads
 #
-#				filestoraged.connected_users[event.connection.fd] = userid
+#				filestoraged.connected_users[event.fd] = userid
 #
 #				# record the new user in users_status
 #				filestoraged.users_status[userid] = new_user

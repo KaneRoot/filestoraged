@@ -23,7 +23,7 @@ class FileStorage::Request
 			return Errors::Authorization.new @mid if user.nil?
 
 			# FIXME: Maybe this should be moved to FileStorage::Service
-			fd = event.connection.fd
+			fd = event.fd
 
 			user_data = filestoraged.get_user_data user.uid
 
@@ -51,7 +51,7 @@ class FileStorage::Request
 			return Errors::Authorization.new @mid if user.nil?
 
 			# FIXME: Maybe this should be moved to FileStorage::Service
-			fd = event.connection.fd
+			fd = event.fd
 
 			user_data = filestoraged.get_user_data user.uid
 

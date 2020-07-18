@@ -57,4 +57,12 @@ def parse_message(requests : Array(JSONIPC.class), message : IPC::Message) : JSO
 	request_type.from_json payload
 end
 
-require "../common/requests/*"
+
+require "../common/requests/client.cr"
+require "../common/requests/login.cr"
+require "../common/requests/transfer.cr"
+require "../common/requests/upload.cr"
+require "../common/requests/errors.cr"
+require "../common/requests/download.cr"
+
+# require "../common/requests/*"

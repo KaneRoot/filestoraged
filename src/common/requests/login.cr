@@ -19,10 +19,9 @@ class FileStorage::Request
 			user, _ = filestoraged.decode_token token
 
 			# FIXME: Maybe this should be moved to FileStorage::Service
-			fd = event.connection.fd
+			fd = event.fd
 
 			filestoraged.logged_users[fd]       = user
-			filestoraged.logged_connections[fd] = event.connection
 
 			user_data = filestoraged.get_user_data user.uid
 

@@ -1,6 +1,5 @@
 require "option_parser"
-require "ipc"
-require "json"
+require "ipc/json"
 require "authd"
 
 require "colorize"
@@ -29,9 +28,8 @@ require "./storage.cr"
 require "./network.cr"
 
 require "dodb"
-require "json"
 
-class FileStorage::Service < IPC::Service
+class FileStorage::Service < IPC::Server
 	# List of connected users (fd => uid).
 	property connected_users = Hash(Int32, Int32).new
 
@@ -43,7 +41,6 @@ class FileStorage::Service < IPC::Service
 	getter storage             : FileStorage::Storage
 
 	getter logged_users        : Hash(Int32, AuthD::User::Public)
-	getter logged_connections  : Hash(Int32, IPC::Connection)
 	getter all_connections     : Array(Int32)
 
 	@auth : AuthD::Client
@@ -54,7 +51,6 @@ class FileStorage::Service < IPC::Service
 		@storage = FileStorage::Storage.new storage_directory
 
 		@logged_users       = Hash(Int32, AuthD::User::Public).new
-		@logged_connections = Hash(Int32, IPC::Connection).new
 		@all_connections    = Array(Int32).new
 
 		@auth = AuthD::Client.new
@@ -64,7 +60,7 @@ class FileStorage::Service < IPC::Service
 	end
 
 	def get_logged_user(event : IPC::Event::Events)
-		fd = event.connection.fd
+		fd = event.fd
 
 		@logged_users[fd]?
 	end
@@ -115,19 +111,18 @@ class FileStorage::Service < IPC::Service
 					puts "#{CORANGE}IPC::Event::Timer#{CRESET}"
 
 				when IPC::Event::Connection
-					puts "#{CBLUE}IPC::Event::Connection: #{event.connection.fd}#{CRESET}"
-					@all_connections << event.connection.fd
+					puts "#{CBLUE}IPC::Event::Connection: #{event.fd}#{CRESET}"
+					@all_connections << event.fd
 
 				when IPC::Event::Disconnection
-					puts "#{CBLUE}IPC::Event::Disconnection: #{event.connection.fd}#{CRESET}"
-					fd = event.connection.fd
+					puts "#{CBLUE}IPC::Event::Disconnection: #{event.fd}#{CRESET}"
+					fd = event.fd
 
-					@logged_connections.delete fd
 					@logged_users.delete fd
 					@all_connections.select! &.!=(fd)
 
 					@connected_users.select! do |fd, uid|
-						fd != event.connection.fd
+						fd != event.fd
 					end
 
 				when IPC::Event::ExtraSocket
@@ -138,8 +133,8 @@ class FileStorage::Service < IPC::Service
 
 				# IPC::Event::Message has to be the last entry
 				# because ExtraSocket and Switch inherit from Message class
-				when IPC::Event::Message
-					puts "#{CBLUE}IPC::Event::Message#{CRESET}: #{event.connection.fd}"
+				when IPC::Event::MessageReceived
+					puts "#{CBLUE}IPC::Event::Message#{CRESET}: #{event.fd}"
 
 					request_start = Time.utc
 
@@ -173,7 +168,7 @@ class FileStorage::Service < IPC::Service
 #					mtype = FileStorage::MessageType.new event.message.utype.to_i32
 #
 #					# First, the user has to be authenticated unless we are receiving its first message.
-#					userid = Context.connected_users[event.connection.fd]?
+#					userid = Context.connected_users[event.fd]?
 #
 #					# If the user is not yet connected but does not try to perform authentication.
 #					if ! userid && mtype != FileStorage::MessageType::Authentication
@@ -234,10 +229,12 @@ class FileStorage::Service < IPC::Service
 					# in the responses. Allows identifying responses easily.
 					response.id = request.id
 
-					event.connection.send response
+					send event.fd, response
 
 					duration = Time.utc - request_start
 					puts "request took: #{duration}"
+				when IPC::Event::MessageSent
+					puts "#{CBLUE}IPC::Event::MessageSent#{CRESET}: #{event.fd}"
 				else
 					warning "unhandled IPC event: #{event.class}"
 				end
