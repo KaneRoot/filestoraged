@@ -248,6 +248,7 @@ class FileStorage::Service < IPC::Server
 	def self.from_cli
 		storage_directory = "files/"
 		key = "nico-nico-nii" # Default authd key, as per the specs. :eyes:
+		timer = 30_000        # Default timer: 30 seconds.
 
 		OptionParser.parse do |parser|
 			parser.banner = "usage: filestoraged [options]"
@@ -256,6 +257,12 @@ class FileStorage::Service < IPC::Server
 				"--root-directory dir",
 				"The root directory for FileStoraged." do |opt|
 				storage_directory = opt
+			end
+
+			parser.on "-t timer",
+				"--timer timer",
+				"Timer. Default: 30 000 (30 seconds)." do |t|
+				timer = t.to_i
 			end
 
 			parser.on "-h",
@@ -273,7 +280,11 @@ class FileStorage::Service < IPC::Server
 			end
 		end
 
-		::FileStorage::Service.new storage_directory, key
+		service = ::FileStorage::Service.new storage_directory, key
+		service.base_timer = timer
+		service.timer = timer
+
+		service
 	end
 end
 

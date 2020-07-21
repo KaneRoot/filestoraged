@@ -9,7 +9,7 @@ class FileStorage::Client < IPC::Client
 
 	def login
 		request = FileStorage::Request::Login.new auth_token
-		send request
+		send @server_fd.not_nil!, request
 
 		response = parse_message [
 			FileStorage::Response::Login,
@@ -46,13 +46,12 @@ class FileStorage::Client < IPC::Client
 			size = 0
 
 			while (size = file.read(buffer)) > 0
-				puts "loop !!!"
 				# transfer message = file_info, chunk count, data (will be base64'd)
 				transfer_message = FileStorage::Request::PutChunk.new file_info,
 					counter,
 					buffer[0 ... size]
 
-				send transfer_message
+				send @server_fd.not_nil!, transfer_message
 				counter += 1
 
 				buffer = Bytes.new buffer_size
@@ -78,7 +77,7 @@ class FileStorage::Client < IPC::Client
 
 	def download(filedigest = nil, name = nil, tags = nil)
 		request = FileStorage::Request::Download.new filedigest, name, tags
-		send request
+		send @server_fd.not_nil!, request
 
 		response = parse_message [
 			FileStorage::Response::Download,
@@ -93,7 +92,7 @@ class FileStorage::Client < IPC::Client
 		File.open(file) do |f|
 			file_info = FileStorage::FileInfo.new f
 			request = FileStorage::Request::Upload.new file_info
-			send request
+			send @server_fd.not_nil!, request
 		end
 
 		response = parse_message [
