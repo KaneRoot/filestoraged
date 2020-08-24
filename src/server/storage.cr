@@ -116,7 +116,7 @@ class FileStorage::Storage
 				# In case the file was completely uploaded already.
 				return FileStorage::Errors::FileFullyUploaded.new mid, path
 			rescue e
-				puts "error during transfer_info.chunks.sort.first"
+				Log.error "error during transfer_info.chunks.sort.first"
 				raise e
 			end
 		end
@@ -128,7 +128,7 @@ class FileStorage::Storage
 		digest = transfer_info.file_info.digest
 		FileStorage::Response::PutChunk.new mid, digest, chunk_number
 	rescue e
-		puts "Error handling write_chunk: #{e.message}"
+		Log.error "Error handling write_chunk: #{e.message}"
 		FileStorage::Errors::GenericError.new mid.not_nil!, "Unexpected error: #{e.message}"
 	end
 
@@ -167,7 +167,7 @@ class FileStorage::Storage
 
 		FileStorage::Response::GetChunk.new mid, digest, chunk, b64_encoded_data
 	rescue e
-		puts "Error handling read_chunk: #{e.message}"
+		Log.error "Error handling read_chunk: #{e.message}"
 		FileStorage::Errors::GenericError.new mid.not_nil!, "Unexpected error: #{e.message}"
 	end
 
@@ -177,7 +177,7 @@ class FileStorage::Storage
 		mid = request.mid
 		mid ||= "no message id"
 
-		puts "hdl upload: mid=#{request.mid}"
+		Log.debug "hdl upload: mid=#{request.mid}"
 		pp! request
 
 		# The final path of the file.
@@ -190,13 +190,13 @@ class FileStorage::Storage
 		# First: check if the file already exists.
 		transfer_info = @db_by_filedigest.get? file_digest
 		if transfer_info.nil?
-			puts "new file: #{file_digest}"
+			Log.debug "new file: #{file_digest}"
 
 			# In case file informations aren't already registered
 			# which is normal at this point.
 			@db << TransferInfo.new user.uid, request.file
 		else
-			puts "file already upload (at least partially): #{file_digest}"
+			Log.debug "file already upload (at least partially): #{file_digest}"
 			# File information already exists, request may be duplicated,
 			# in this case: ignore the upload request.
 			begin
@@ -208,7 +208,7 @@ class FileStorage::Storage
 				# In case the file was completely uploaded already.
 				return FileStorage::Errors::FileFullyUploaded.new mid, path
 			rescue e
-				puts "error at transfer_info.chunks.sort.first in upload"
+				Log.error "error at transfer_info.chunks.sort.first in upload"
 				raise e
 			end
 		end
@@ -217,7 +217,7 @@ class FileStorage::Storage
 
 		FileStorage::Response::Upload.new request.mid, path
 	rescue e
-		puts "Error handling upload request: #{e.message}"
+		Log.error "Error handling upload request: #{e.message}"
 		FileStorage::Errors::GenericError.new mid.not_nil!, "Unexpected error in upload request: #{e.message}"
 	end
 
@@ -226,7 +226,7 @@ class FileStorage::Storage
 
 		mid = request.mid
 		mid ||= "no message id"
-		puts "hdl download: mid=#{mid}"
+		Log.debug "hdl download: mid=#{mid}"
 
 		unless (file_digest = request.filedigest).nil?
 			unless (file_transfer = @db_by_filedigest.get? file_digest).nil?
@@ -248,7 +248,7 @@ class FileStorage::Storage
 		# Should have returned by now: file wasn't found.
 		FileStorage::Errors::GenericError.new mid, "File not found with provided parameters."
 	rescue e
-		puts "Error handling download request: #{e.message}"
+		Log.error "Error handling download request: #{e.message}"
 		FileStorage::Errors::GenericError.new mid.not_nil!, "Unexpected error in download request: #{e.message}"
 	end
 
@@ -259,7 +259,7 @@ class FileStorage::Storage
 #		user : UserData,
 #		event : IPC::Event::Message) : Array(FileStorage::Response)
 #
-#		puts "hdl request"
+#		Log.debug "hdl request"
 #		responses = Array(FileStorage::Response | FileStorage::Errors).new
 #
 #		requests.each do |request|
@@ -272,7 +272,6 @@ class FileStorage::Storage
 #				raise "request not understood"
 #			end
 #
-#			puts
 #		end
 #
 #		responses

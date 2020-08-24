@@ -29,6 +29,26 @@ require "./network.cr"
 
 require "dodb"
 
+class Context
+	class_property verbosity = 1
+end
+
+class Log
+	def self.debug(message)
+		STDOUT << ":: ".colorize(:green) << message.colorize(:white) << "\n" if ::Context.verbosity > 2
+	end
+	def self.info(message)
+		STDOUT << ":: ".colorize(:blue) << message.colorize(:white) << "\n" if ::Context.verbosity > 1
+	end
+	def self.warning(message)
+		STDERR << "?? ".colorize(:yellow) << message.colorize(:yellow) << "\n" if ::Context.verbosity > 0
+	end
+	def self.error(message)
+		STDERR << "!! ".colorize(:red) << message.colorize(:red) << "\n" if ::Context.verbosity > 0
+	end
+end
+
+
 class FileStorage::Service < IPC::Server
 	# List of connected users (fd => uid).
 	property connected_users = Hash(Int32, Int32).new
@@ -65,16 +85,6 @@ class FileStorage::Service < IPC::Server
 		@logged_users[fd]?
 	end
 
-	def info(message)
-		STDOUT << ":: ".colorize(:green) << message.colorize(:white) << "\n"
-	end
-	def warning(message)
-		STDERR << "?? ".colorize(:yellow) << message.colorize(:yellow) << "\n"
-	end
-	def error(message)
-		STDERR << "!! ".colorize(:red) << message.colorize(:red) << "\n"
-	end
-
 	def decode_token(token : String)
 		@auth.decode_token token
 	end
@@ -101,21 +111,21 @@ class FileStorage::Service < IPC::Server
 	#end
 
 	def run
-		info "Starting filestoraged"
+		Log.info "Starting filestoraged"
 
 		self.loop do |event|
 			begin
 
 				case event
 				when IPC::Event::Timer
-					puts "#{CORANGE}IPC::Event::Timer#{CRESET}"
+					Log.debug "IPC::Event::Timer"
 
 				when IPC::Event::Connection
-					puts "#{CBLUE}IPC::Event::Connection: #{event.fd}#{CRESET}"
+					Log.debug "IPC::Event::Connection: #{event.fd}"
 					@all_connections << event.fd
 
 				when IPC::Event::Disconnection
-					puts "#{CBLUE}IPC::Event::Disconnection: #{event.fd}#{CRESET}"
+					Log.debug "IPC::Event::Disconnection: #{event.fd}"
 					fd = event.fd
 
 					@logged_users.delete fd
@@ -126,15 +136,15 @@ class FileStorage::Service < IPC::Server
 					end
 
 				when IPC::Event::ExtraSocket
-					puts "#{CRED}IPC::Event::ExtraSocket: should not happen in this service#{CRESET}"
+					Log.warning "IPC::Event::ExtraSocket: should not happen in this service"
 
 				when IPC::Event::Switch
-					puts "#{CRED}IPC::Event::Switch: should not happen in this service#{CRESET}"
+					Log.warning "IPC::Event::Switch: should not happen in this service"
 
 				# IPC::Event::Message has to be the last entry
 				# because ExtraSocket and Switch inherit from Message class
 				when IPC::Event::MessageReceived
-					puts "#{CBLUE}IPC::Event::Message#{CRESET}: #{event.fd}"
+					Log.debug "IPC::Event::Message: #{event.fd}"
 
 					request_start = Time.utc
 
@@ -144,15 +154,15 @@ class FileStorage::Service < IPC::Server
 						raise "unknown request type"
 					end
 
-					info "<< #{request.class.name.sub /^FileStorage::Request::/, ""}"
+					Log.info "<< #{request.class.name.sub /^FileStorage::Request::/, ""}"
 
 					response = request.handle self, event
 					response_type = response.class.name
 
 					if response.responds_to?(:reason)
-						warning ">> #{response_type.sub /^FileStorage::Errors::/, ""} (#{response.reason})"
+						Log.warning ">> #{response_type.sub /^FileStorage::Errors::/, ""} (#{response.reason})"
 					else
-						info ">> #{response_type.sub /^FileStorage::Response::/, ""}"
+						Log.info ">> #{response_type.sub /^FileStorage::Response::/, ""}"
 					end
 
 					#################################################################
@@ -180,18 +190,18 @@ class FileStorage::Service < IPC::Server
 #
 #					case mtype
 #					when .authentication?
-#						puts "Receiving an authentication message"
+#						Log.debug "Receiving an authentication message"
 #						# Test if the client is already authenticated.
 #						if userid
 #							user = Context.users_status[userid]
 #							raise "Authentication message while the user was already connected: this should not happen"
 #						else
-#							puts "User is not currently connected"
+#							Log.debug "User is not currently connected"
 #							hdl_authentication event
 #						end
 #
 #					when .upload_request?
-#						puts "Upload request"
+#						Log.debug "Upload request"
 #						request = FileStorage::UploadRequest.from_json(
 #							String.new event.message.payload
 #						)
@@ -199,7 +209,7 @@ class FileStorage::Service < IPC::Server
 #						do_response event, response
 #
 #					when .download_request?
-#						puts "Download request"
+#						Log.debug "Download request"
 #						request = FileStorage::DownloadRequest.from_json(
 #							String.new event.message.payload
 #						)
@@ -232,15 +242,15 @@ class FileStorage::Service < IPC::Server
 					send event.fd, response
 
 					duration = Time.utc - request_start
-					puts "request took: #{duration}"
+					Log.debug "request took: #{duration}"
 				when IPC::Event::MessageSent
-					puts "#{CBLUE}IPC::Event::MessageSent#{CRESET}: #{event.fd}"
+					Log.debug "IPC::Event::MessageSent: #{event.fd}"
 				else
-					warning "unhandled IPC event: #{event.class}"
+					Log.warning "unhandled IPC event: #{event.class}"
 				end
 
 			rescue exception
-				error "exception: #{typeof(exception)} - #{exception.message}"
+				Log.error "exception: #{typeof(exception)} - #{exception.message}"
 			end
 		end
 	end
@@ -264,6 +274,13 @@ class FileStorage::Service < IPC::Server
 				"Timer. Default: 30 000 (30 seconds)." do |t|
 				timer = t.to_i
 			end
+
+			parser.on "-v verbosity",
+				"--verbosity level",
+				"Verbosity level. From 0 to 3. Default: 1" do |v|
+				Context.verbosity = v.to_i
+			end
+
 
 			parser.on "-h",
 				"--help",
