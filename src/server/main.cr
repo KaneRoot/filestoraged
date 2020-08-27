@@ -4,7 +4,7 @@ require "authd"
 
 require "colorize"
 
-require "weird-crystal-base"
+require "baguette-crystal-base"
 
 require "../common/colors"
 # require "../common/filestorage.cr"
@@ -28,25 +28,6 @@ require "./storage.cr"
 require "./network.cr"
 
 require "dodb"
-
-class Context
-	class_property verbosity = 1
-end
-
-class Log
-	def self.debug(message)
-		STDOUT << ":: ".colorize(:green) << message.colorize(:white) << "\n" if ::Context.verbosity > 2
-	end
-	def self.info(message)
-		STDOUT << ":: ".colorize(:blue) << message.colorize(:white) << "\n" if ::Context.verbosity > 1
-	end
-	def self.warning(message)
-		STDERR << "?? ".colorize(:yellow) << message.colorize(:yellow) << "\n" if ::Context.verbosity > 0
-	end
-	def self.error(message)
-		STDERR << "!! ".colorize(:red) << message.colorize(:red) << "\n" if ::Context.verbosity > 0
-	end
-end
 
 
 class FileStorage::Service < IPC::Server
@@ -111,21 +92,21 @@ class FileStorage::Service < IPC::Server
 	#end
 
 	def run
-		Log.info "Starting filestoraged"
+		Baguette::Log.title "Starting filestoraged"
 
 		self.loop do |event|
 			begin
 
 				case event
 				when IPC::Event::Timer
-					Log.debug "IPC::Event::Timer"
+					Baguette::Log.debug "IPC::Event::Timer"
 
 				when IPC::Event::Connection
-					Log.debug "IPC::Event::Connection: #{event.fd}"
+					Baguette::Log.debug "IPC::Event::Connection: #{event.fd}"
 					@all_connections << event.fd
 
 				when IPC::Event::Disconnection
-					Log.debug "IPC::Event::Disconnection: #{event.fd}"
+					Baguette::Log.debug "IPC::Event::Disconnection: #{event.fd}"
 					fd = event.fd
 
 					@logged_users.delete fd
@@ -136,15 +117,15 @@ class FileStorage::Service < IPC::Server
 					end
 
 				when IPC::Event::ExtraSocket
-					Log.warning "IPC::Event::ExtraSocket: should not happen in this service"
+					Baguette::Log.warning "IPC::Event::ExtraSocket: should not happen in this service"
 
 				when IPC::Event::Switch
-					Log.warning "IPC::Event::Switch: should not happen in this service"
+					Baguette::Log.warning "IPC::Event::Switch: should not happen in this service"
 
 				# IPC::Event::Message has to be the last entry
 				# because ExtraSocket and Switch inherit from Message class
 				when IPC::Event::MessageReceived
-					Log.debug "IPC::Event::Message: #{event.fd}"
+					Baguette::Log.debug "IPC::Event::Message: #{event.fd}"
 
 					request_start = Time.utc
 
@@ -154,15 +135,15 @@ class FileStorage::Service < IPC::Server
 						raise "unknown request type"
 					end
 
-					Log.info "<< #{request.class.name.sub /^FileStorage::Request::/, ""}"
+					Baguette::Log.info "<< #{request.class.name.sub /^FileStorage::Request::/, ""}"
 
 					response = request.handle self, event
 					response_type = response.class.name
 
 					if response.responds_to?(:reason)
-						Log.warning ">> #{response_type.sub /^FileStorage::Errors::/, ""} (#{response.reason})"
+						Baguette::Log.warning ">> #{response_type.sub /^FileStorage::Errors::/, ""} (#{response.reason})"
 					else
-						Log.info ">> #{response_type.sub /^FileStorage::Response::/, ""}"
+						Baguette::Log.info ">> #{response_type.sub /^FileStorage::Response::/, ""}"
 					end
 
 					#################################################################
@@ -190,18 +171,18 @@ class FileStorage::Service < IPC::Server
 #
 #					case mtype
 #					when .authentication?
-#						Log.debug "Receiving an authentication message"
+#						Baguette::Log.debug "Receiving an authentication message"
 #						# Test if the client is already authenticated.
 #						if userid
 #							user = Context.users_status[userid]
 #							raise "Authentication message while the user was already connected: this should not happen"
 #						else
-#							Log.debug "User is not currently connected"
+#							Baguette::Log.debug "User is not currently connected"
 #							hdl_authentication event
 #						end
 #
 #					when .upload_request?
-#						Log.debug "Upload request"
+#						Baguette::Log.debug "Upload request"
 #						request = FileStorage::UploadRequest.from_json(
 #							String.new event.message.payload
 #						)
@@ -209,7 +190,7 @@ class FileStorage::Service < IPC::Server
 #						do_response event, response
 #
 #					when .download_request?
-#						Log.debug "Download request"
+#						Baguette::Log.debug "Download request"
 #						request = FileStorage::DownloadRequest.from_json(
 #							String.new event.message.payload
 #						)
@@ -242,15 +223,15 @@ class FileStorage::Service < IPC::Server
 					send event.fd, response
 
 					duration = Time.utc - request_start
-					Log.debug "request took: #{duration}"
+					Baguette::Log.debug "request took: #{duration}"
 				when IPC::Event::MessageSent
-					Log.debug "IPC::Event::MessageSent: #{event.fd}"
+					Baguette::Log.debug "IPC::Event::MessageSent: #{event.fd}"
 				else
-					Log.warning "unhandled IPC event: #{event.class}"
+					Baguette::Log.warning "unhandled IPC event: #{event.class}"
 				end
 
 			rescue exception
-				Log.error "exception: #{typeof(exception)} - #{exception.message}"
+				Baguette::Log.error "exception: #{typeof(exception)} - #{exception.message}"
 			end
 		end
 	end
@@ -278,7 +259,7 @@ class FileStorage::Service < IPC::Server
 			parser.on "-v verbosity",
 				"--verbosity level",
 				"Verbosity level. From 0 to 3. Default: 1" do |v|
-				Context.verbosity = v.to_i
+				Baguette::Context.verbosity = v.to_i
 			end
 
 

@@ -27,7 +27,7 @@ class FileStorage::Request
 
 			user_data = filestoraged.get_user_data user.uid
 
-			Log.info "PutChunk request: #{@mid}, file #{@filedigest}, chunk: n=#{@chunk.n}, on=#{@chunk.on}, digest=#{@chunk.digest}"
+			Baguette::Log.info "PutChunk request: #{@mid}, file #{@filedigest}, chunk: n=#{@chunk.n}, on=#{@chunk.on}, digest=#{@chunk.digest}"
 
 			filestoraged.storage.write_chunk self, user_data
 		rescue e

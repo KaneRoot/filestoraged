@@ -15,8 +15,8 @@ dependencies:
   authd:
     git: https://git.baguette.netlib.re/Baguette/authd.git
     branch: master
-  weird-crystal-base:
-    git: https://git.baguette.netlib.re/Baguette/weird-crystal-base
+  baguette-crystal-base:
+    git: https://git.baguette.netlib.re/Baguette/baguette-crystal-base
     branch: master
 
 
