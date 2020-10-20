@@ -1,42 +1,16 @@
 require "ipc"
 require "json"
 
-class JSONIPC
-	include JSON::Serializable
-
-	getter       type = -1
-	class_getter type = -1
-
-	property     id   : JSON::Any?
-
-	def handle(service : IPC::Server, event : IPC::Event::Events)
-		raise "unimplemented"
-	end
-
-	macro request(id, type, &block)
-		class {{id}} < ::JSONIPC
-			include JSON::Serializable
-
-			@@type = {{type}}
-			def type
-				@@type
-			end
-
-			{{yield}}
-		end
-	end
-end
-
 class IPC::Context
-	def send(fd : Int32, request : JSONIPC)
+	def send(fd : Int32, request : IPC::JSON)
 		send fd, request.type.to_u8, request.to_json
 	end
 end
 
-class FileStorage
-	class_getter requests  = [] of JSONIPC.class
-	class_getter responses = [] of JSONIPC.class
-	class_getter errors    = [] of JSONIPC.class
+module FileStorage
+	class_getter requests  = [] of IPC::JSON.class
+	class_getter responses = [] of IPC::JSON.class
+	class_getter errors    = [] of IPC::JSON.class
 end
 
 class FileStorage::Client < IPC::Client
@@ -44,19 +18,6 @@ class FileStorage::Client < IPC::Client
 		initialize "filestorage"
 	end
 end
-
-def parse_message(requests : Array(JSONIPC.class), message : IPC::Message) : JSONIPC?
-	request_type = requests.find &.type.==(message.utype)
-
-	payload = String.new message.payload
-
-	if request_type.nil?
-		raise "invalid request type (#{message.utype})"
-	end
-
-	request_type.from_json payload
-end
-
 
 require "../common/requests/client.cr"
 require "../common/requests/login.cr"

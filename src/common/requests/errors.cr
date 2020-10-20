@@ -1,5 +1,5 @@
 class FileStorage::Errors
-	JSONIPC.request GenericError, 200 do
+	IPC::JSON.message GenericError, 200 do
 		property mid    : String
 		property reason : String
 		def initialize(@mid, @reason)
@@ -7,7 +7,7 @@ class FileStorage::Errors
 	end
 	FileStorage.errors << GenericError
 
-	JSONIPC.request Authorization, 201 do
+	IPC::JSON.message Authorization, 201 do
 		property mid    : String
 		property reason : String
 		def initialize(@mid, @reason = "authorization")
@@ -16,7 +16,7 @@ class FileStorage::Errors
 	FileStorage.errors << Authorization
 
 	# When uploading a chunk already present in the DB.
-	JSONIPC.request ChunkAlreadyUploaded, 202 do
+	IPC::JSON.message ChunkAlreadyUploaded, 202 do
 		property mid        : String
 		property reason     = "Chunk already present"
 		property filedigest : String
@@ -28,7 +28,7 @@ class FileStorage::Errors
 	FileStorage.errors << ChunkAlreadyUploaded
 
 	# You upload a chunk, but you are not the owner of the file.
-	JSONIPC.request ChunkUploadDenied, 203 do
+	IPC::JSON.message ChunkUploadDenied, 203 do
 		property mid        : String
 		property reason     = "This file is not yours"
 		property filedigest : String
@@ -39,7 +39,7 @@ class FileStorage::Errors
 	FileStorage.errors << ChunkUploadDenied
 
 	# When uploading a file already present in the DB.
-	JSONIPC.request FileExists, 204 do
+	IPC::JSON.message FileExists, 204 do
 		property mid        : String
 		property reason     = "file already present"
 		property path       : String
@@ -51,7 +51,7 @@ class FileStorage::Errors
 	FileStorage.errors << FileExists
 
 	# When transfering a chunk for an inexistent file.
-	JSONIPC.request FileDoesNotExist, 205 do
+	IPC::JSON.message FileDoesNotExist, 205 do
 		property mid        : String
 		property reason     = "file does not exist"
 		property filedigest : String
@@ -62,7 +62,7 @@ class FileStorage::Errors
 	FileStorage.errors << FileDoesNotExist
 
 	# When a file was already fully uploaded.
-	JSONIPC.request FileFullyUploaded, 206 do
+	IPC::JSON.message FileFullyUploaded, 206 do
 		property mid        : String
 		property reason     = "file already uploaded fully"
 		property path       : String

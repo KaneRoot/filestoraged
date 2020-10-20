@@ -29,6 +29,23 @@ require "./network.cr"
 
 require "dodb"
 
+class IPC::JSON
+	def handle(filestoraged : FileStorage::Service, event : IPC::Event::Events)
+		raise "unknown request"
+	end
+end
+
+module FileStorage
+	class Exception < ::Exception
+	end
+	class AuthorizationException < ::Exception
+	end
+	class NotLoggedException < ::Exception
+	end
+	class AdminAuthorizationException < ::Exception
+	end
+end
+
 
 class FileStorage::Service < IPC::Server
 	# List of connected users (fd => uid).
@@ -85,11 +102,49 @@ class FileStorage::Service < IPC::Server
 		@storage.user_data_per_user.update_or_create user_data.uid.to_s, user_data
 	end
 
-	# TODO: could be useful to send notifications.
-	#def send_notifications(fd : Int32, value : Int32)
-		# @all_connections.select(&.!=(fd)).each do |fd| ... end
-		# IPC::Connection.new(fd).send Response::Something.new ...
-	#end
+	def handle_request(event : IPC::Event::MessageReceived)
+
+		request = FileStorage.requests.parse_ipc_json event.message
+		if request.nil?
+			raise "unknown request type"
+		end
+
+		request_name = request.class.name.sub /^FileStorage::Request::/, ""
+		Baguette::Log.info "<< #{request_name}"
+
+		response = FileStorage::Errors::GenericError.new "#{request.id}", "generic error"
+
+		request_id = "#{request.id}"
+
+		begin
+			response = request.handle self, event
+		rescue e : AuthorizationException
+			Baguette::Log.error "#{request_name} authorization error"
+			response = FileStorage::Errors::GenericError.new request_id, "authorization error"
+		rescue e : AdminAuthorizationException
+			Baguette::Log.error "#{request_name} no admin authorization"
+			response = FileStorage::Errors::GenericError.new request_id, "admin authorization error"
+		rescue e : NotLoggedException
+			Baguette::Log.error "#{request_name} user not logged"
+			response = FileStorage::Errors::GenericError.new request_id, "user not logged"
+		# Do not handle generic exception case: do not provide a response.
+		# rescue e # Generic case
+		# 	Baguette::Log.error "#{request_name} generic error #{e}"
+		end
+
+		# If clients sent requests with an “id” field, it is copied
+		# in the responses. Allows identifying responses easily.
+		response.id = request.id
+
+		send event.fd, response
+
+		response_name = response.class.name.sub /^FileStorage::(Response|Errors)::/, ""
+		if response.responds_to?(:reason)
+			Baguette::Log.warning ">> #{response_name} (#{response.reason})"
+		else
+			Baguette::Log.info ">> #{response_name}"
+		end
+	end
 
 	def run
 		Baguette::Log.title "Starting filestoraged"
@@ -128,102 +183,10 @@ class FileStorage::Service < IPC::Server
 					Baguette::Log.debug "IPC::Event::Message: #{event.fd}"
 
 					request_start = Time.utc
-
-					request = parse_message FileStorage.requests, event.message
-
-					if request.nil?
-						raise "unknown request type"
-					end
-
-					Baguette::Log.info "<< #{request.class.name.sub /^FileStorage::Request::/, ""}"
-
-					response = request.handle self, event
-					response_type = response.class.name
-
-					if response.responds_to?(:reason)
-						Baguette::Log.warning ">> #{response_type.sub /^FileStorage::Errors::/, ""} (#{response.reason})"
-					else
-						Baguette::Log.info ">> #{response_type.sub /^FileStorage::Response::/, ""}"
-					end
-
-					#################################################################
-					# THERE START
-					#################################################################
-
-#					# The first message sent to the server has to be the AuthenticationMessage.
-#					# Users sent their token (JWT) to authenticate themselves.
-#					# The token contains the user id, its login and a few other parameters.
-#					# (see the authd documentation).
-#					# TODO: for now, the token is replaced by a hardcoded one, for debugging
-#
-#					mtype = FileStorage::MessageType.new event.message.utype.to_i32
-#
-#					# First, the user has to be authenticated unless we are receiving its first message.
-#					userid = Context.connected_users[event.fd]?
-#
-#					# If the user is not yet connected but does not try to perform authentication.
-#					if ! userid && mtype != FileStorage::MessageType::Authentication
-#						# TODO: replace this with an Error message.
-#						mid = "no message id"
-#						response = FileStorage::Response.new mid, "Not OK", "Action on non connected user"
-#						do_response event, response
-#					end
-#
-#					case mtype
-#					when .authentication?
-#						Baguette::Log.debug "Receiving an authentication message"
-#						# Test if the client is already authenticated.
-#						if userid
-#							user = Context.users_status[userid]
-#							raise "Authentication message while the user was already connected: this should not happen"
-#						else
-#							Baguette::Log.debug "User is not currently connected"
-#							hdl_authentication event
-#						end
-#
-#					when .upload_request?
-#						Baguette::Log.debug "Upload request"
-#						request = FileStorage::UploadRequest.from_json(
-#							String.new event.message.payload
-#						)
-#						response = hdl_upload request, Context.users_status[userid]
-#						do_response event, response
-#
-#					when .download_request?
-#						Baguette::Log.debug "Download request"
-#						request = FileStorage::DownloadRequest.from_json(
-#							String.new event.message.payload
-#						)
-#						response = hdl_download request, Context.users_status[userid]
-#						do_response event, response
-#
-#					when .transfer?
-#						# throw an error if the user isn't recorded
-#						unless user = Context.users_status[userid]?
-#							raise "The user isn't recorded in the users_status structure"
-#						end
-#
-#						transfer = FileStorage::PutChunk.from_json(
-#							String.new event.message.payload
-#						)
-#						response = hdl_transfer transfer, Context.users_status[userid]
-#
-#						do_response event, response
-#					end
-
-					#################################################################
-					# FINISH
-					#################################################################
-
-
-					# If clients sent requests with an “id” field, it is copied
-					# in the responses. Allows identifying responses easily.
-					response.id = request.id
-
-					send event.fd, response
-
+					handle_request event
 					duration = Time.utc - request_start
 					Baguette::Log.debug "request took: #{duration}"
+
 				when IPC::Event::MessageSent
 					Baguette::Log.debug "IPC::Event::MessageSent: #{event.fd}"
 				else

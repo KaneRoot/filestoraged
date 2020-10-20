@@ -1,4 +1,4 @@
-class FileStorage
+module FileStorage
 	def self.message_buffer_size
 	def self.file_reading_buffer_size
 	def self.data_digest(data : Bytes)

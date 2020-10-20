@@ -10,7 +10,7 @@
 	#	})
 	#end
 
-class FileStorage
+module FileStorage
 
 	# 1 MB read buffer, on-disk
 	def self.file_reading_buffer_size
@@ -43,10 +43,6 @@ class FileStorage
 
 		io.digest.hexstring
 	end
-end
-
-
-class FileStorage::Exception < ::Exception
 end
 
 class FileStorage::Chunk

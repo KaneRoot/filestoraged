@@ -4,7 +4,7 @@ require "json"
 require "base64"
 
 class FileStorage::Request
-	JSONIPC.request Login, 0 do
+	IPC::JSON.message Login, 0 do
 		property mid : String = ""
 
 		property token : String
@@ -34,7 +34,7 @@ class FileStorage::Request
 end
 
 class FileStorage::Response
-	JSONIPC.request Login, 5 do
+	IPC::JSON.message Login, 5 do
 		property mid : String
 		def initialize(@mid)
 		end
