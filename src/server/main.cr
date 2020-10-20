@@ -116,20 +116,20 @@ class FileStorage::Service < IPC::Server
 
 		request_id = "#{request.id}"
 
-		begin
-			response = request.handle self, event
+		response = begin
+			request.handle self, event
 		rescue e : AuthorizationException
-			Baguette::Log.error "#{request_name} authorization error"
-			response = FileStorage::Errors::GenericError.new request_id, "authorization error"
+			Baguette::Log.warning "#{request_name} authorization error"
+			Errors::Authorization.new request_id
 		rescue e : AdminAuthorizationException
-			Baguette::Log.error "#{request_name} no admin authorization"
-			response = FileStorage::Errors::GenericError.new request_id, "admin authorization error"
+			Baguette::Log.warning "#{request_name} no admin authorization"
+			Errors::Authorization.new request_id
 		rescue e : NotLoggedException
-			Baguette::Log.error "#{request_name} user not logged"
-			response = FileStorage::Errors::GenericError.new request_id, "user not logged"
-		# Do not handle generic exception case: do not provide a response.
-		# rescue e # Generic case
-		# 	Baguette::Log.error "#{request_name} generic error #{e}"
+			Baguette::Log.warning "#{request_name} user not logged"
+			Errors::GenericError.new request_id, "user not logged"
+		rescue e
+			Baguette::Log.error "#{request_name} generic error #{e}"
+			Errors::GenericError.new request_id, "unexpected error"
 		end
 
 		# If clients sent requests with an “id” field, it is copied

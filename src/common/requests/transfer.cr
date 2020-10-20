@@ -20,18 +20,16 @@ class FileStorage::Request
 		def handle(filestoraged : FileStorage::Service, event : IPC::Event::Events)
 			user = filestoraged.get_logged_user event
 
-			return Errors::Authorization.new @mid if user.nil?
+			raise NotLoggedException.new if user.nil?
 
 			# FIXME: Maybe this should be moved to FileStorage::Service
 			fd = event.fd
 
 			user_data = filestoraged.get_user_data user.uid
 
-			Baguette::Log.info "PutChunk request: #{@mid}, file #{@filedigest}, chunk: n=#{@chunk.n}, on=#{@chunk.on}, digest=#{@chunk.digest}"
+			Baguette::Log.debug "PutChunk request: #{@mid}, file #{@filedigest}, chunk: n=#{@chunk.n}, on=#{@chunk.on}, digest=#{@chunk.digest}"
 
 			filestoraged.storage.write_chunk self, user_data
-		rescue e
-			return Errors::GenericError.new @mid, e.to_s
 		end
 	end
 	FileStorage.requests << PutChunk
@@ -48,16 +46,16 @@ class FileStorage::Request
 		def handle(filestoraged : FileStorage::Service, event : IPC::Event::Events)
 			user = filestoraged.get_logged_user event
 
-			return Errors::Authorization.new @mid if user.nil?
+			raise NotLoggedException.new if user.nil?
 
 			# FIXME: Maybe this should be moved to FileStorage::Service
 			fd = event.fd
 
 			user_data = filestoraged.get_user_data user.uid
 
+			Baguette::Log.debug "PutChunk request: #{@mid}, file #{@filedigest}, chunk: n=#{@n}"
+
 			filestoraged.storage.read_chunk self, user_data
-		rescue e
-			return Errors::GenericError.new @mid, e.to_s
 		end
 	end
 	FileStorage.requests << GetChunk

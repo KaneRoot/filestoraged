@@ -12,7 +12,7 @@ class FileStorage::Request
 		def handle(filestoraged : FileStorage::Service, event : IPC::Event::Events)
 			user = filestoraged.get_logged_user event
 
-			return Errors::Authorization.new @mid if user.nil?
+			raise NotLoggedException.new if user.nil?
 
 			# FIXME: Maybe this should be moved to FileStorage::Service
 			fd = event.fd
@@ -20,8 +20,6 @@ class FileStorage::Request
 			user_data = filestoraged.get_user_data user.uid
 
 			filestoraged.storage.download self, user_data
-		rescue e
-			return Errors::GenericError.new @mid, e.to_s
 		end
 	end
 	FileStorage.requests << Download

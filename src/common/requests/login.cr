@@ -25,9 +25,7 @@ class FileStorage::Request
 
 			user_data = filestoraged.get_user_data user.uid
 
-			return Response::Login.new @mid
-		rescue e
-			return Errors::GenericError.new @mid, "unauthorized"
+			Response::Login.new @mid
 		end
 	end
 	FileStorage.requests << Login
