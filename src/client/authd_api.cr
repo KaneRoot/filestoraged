@@ -1,6 +1,8 @@
 
 def authd_get_token(key_file : String? = nil, login : String? = nil, pass : String? = nil)
 
+	# return AuthD::Token.new("test", 1000).to_s if CLI.simulation
+
 	authd = AuthD::Client.new
 	key_file.try do |file| # FIXME: fail if missing?
 		authd.key = File.read(file).chomp
