@@ -28,8 +28,8 @@ end
 class FileStorage::Response
 	IPC::JSON.message Download, 30 do
 		property mid       : String
-		property nb_chunks : Int32
-		def initialize(@mid, @nb_chunks)
+		property file_info : FileInfo
+		def initialize(@mid, @file_info)
 		end
 	end
 end

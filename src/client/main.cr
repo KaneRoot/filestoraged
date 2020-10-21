@@ -21,7 +21,9 @@ class Context
 	class_property authd_login : String = "test"
 	class_property authd_pass  : String = "test"
 
-	class_property to_transfer = Array(String).new
+	class_property path        : String = "."
+
+	class_property args = Array(String).new
 
 	class_property service_name = "filestorage"
 	class_property command = "unknown"
@@ -29,7 +31,7 @@ end
 
 opt_unknown_args = ->(parser : OptionParser) {
 	parser.unknown_args do |arg|
-		Context.to_transfer = arg
+		Context.args = arg
 	end
 }
 
@@ -64,6 +66,13 @@ OptionParser.parse do |parser|
 		Context.authd_pass = pass
 	end
 
+	parser.on "-d directory",
+		"--directory path",
+		"Path where to put downloaded files." do |path|
+		Context.path = path
+	end
+
+
 	parser.on "-v verbosity",
 		"--verbosity level",
 		"Verbosity. From 0 to 4." do |v|
@@ -85,8 +94,7 @@ def put(client : FileStorage::Client)
 
 	files = [] of String
 
-	Baguette::Log.debug "files and directories to transfer"
-	Context.to_transfer.each do |f|
+	Context.args.each do |f|
 		if File.directory? f
 			# TODO
 			Baguette::Log.warning "Directories not supported, for now"
@@ -104,15 +112,34 @@ def put(client : FileStorage::Client)
 	end
 
 	files.each do |file|
-		Baguette::Log.info "upload: #{file}"
-		pp! client.upload file
-		Baguette::Log.debug "transfer"
+		response = client.upload file
+		if response.is_a?(FileStorage::Errors::FileFullyUploaded)
+			file_info = File.open(file) do |f|
+				FileStorage::FileInfo.new f
+			end
+			Baguette::Log.warning "file #{file} already uploaded, digest: #{file_info.digest}"
+			next
+		end
+		Baguette::Log.info "transfering: #{file}"
 		client.transfer file
 	end
 end
 
 def get(client : FileStorage::Client)
-	Baguette::Log.error "get command not available, yet"
+	Baguette::Log.warning "get command not complete, yet"
+
+	files = Context.args
+	files.each do |filedigest|
+		response = client.download filedigest
+		case response
+		when FileStorage::Response::Download
+			Baguette::Log.info "downloading file #{filedigest} with #{response.file_info.nb_chunks} chunks"
+			client.get_chunks response, Context.path
+		else
+			Baguette::Log.error ">> #{response.class.name}"
+			next
+		end
+	end
 end
 
 

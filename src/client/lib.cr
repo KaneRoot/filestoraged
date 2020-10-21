@@ -83,6 +83,53 @@ class FileStorage::Client < IPC::Client
 		parse_message [ FileStorage::Response::Download ], read
 	end
 
+	def get_chunks(dl_response : FileStorage::Response::Download, path : String = ".")
+		file_path = "#{path}/#{dl_response.file_info.name}"
+		Baguette::Log.debug "Getting #{file_path}"
+
+		digest = dl_response.file_info.digest
+		buffer_size = FileStorage.message_buffer_size
+
+		counter = 0
+		size = 0
+
+		while counter < dl_response.file_info.nb_chunks
+			Baguette::Log.debug "Getting #{file_path}: chunk #{counter+1}/#{dl_response.file_info.nb_chunks}"
+			get_chunk_message = FileStorage::Request::GetChunk.new digest, counter
+			send_now @server_fd.not_nil!, get_chunk_message
+			response = parse_message [ FileStorage::Response::GetChunk ], read
+			# TODO: write the file
+			pp! response
+
+			case response
+			when FileStorage::Response::GetChunk
+				b64_decoded_data = Base64.decode response.data
+				write_chunk file_path, buffer_size, response.chunk.n, b64_decoded_data
+			else
+				Baguette::Log.error "#{response}"
+				raise "wrong response: #{response}"
+			end
+			counter += 1
+		end
+	end
+
+	# Reception of a file chunk.
+	def write_chunk(file_path : String,
+			chunk_size : Int32,
+			offset : Int32,
+			data : Bytes
+		)
+
+		pp! file_path, chunk_size, offset, data.size
+
+		# Create the file if non existant.
+		File.open(file_path, "a+") do |file|
+			file.seek (offset * chunk_size)
+			file.write data
+		end
+	end
+
+
 	def upload(file : String)
 		file_info : FileStorage::FileInfo
 		File.open(file) do |f|

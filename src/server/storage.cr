@@ -45,7 +45,7 @@ class FileStorage::Storage
 	# - meta/  : DODB TransferInfo
 	# - users/ : DODB UserData (for later use: quotas, rights)
 
-	def initialize(@root)
+	def initialize(@root, reindex : Bool = false)
 		@db = DODB::DataBase(TransferInfo).new "#{@root}/meta"
 
 		# Where to store uploaded files.
@@ -58,6 +58,11 @@ class FileStorage::Storage
 
 		@user_data            = DODB::DataBase(UserData).new "#{@root}/users"
 		@user_data_per_user   = @user_data.new_index "uid",    &.uid.to_s
+
+		if reindex
+			@db.reindex_everything!
+			@user_data.reindex_everything!
+		end
 	end
 
 	# Path part of the URL.
@@ -127,9 +132,6 @@ class FileStorage::Storage
 
 		digest = transfer_info.file_info.digest
 		FileStorage::Response::PutChunk.new mid, digest, chunk_number
-	rescue e
-		Baguette::Log.error "Error handling write_chunk: #{e.message}"
-		FileStorage::Errors::GenericError.new mid.not_nil!, "Unexpected error: #{e.message}"
 	end
 
 	# Provide a file chunk to the client.
@@ -166,9 +168,6 @@ class FileStorage::Storage
 		chunk = Chunk.new chunk_number, transfer_info.file_info.nb_chunks, b64_encoded_data
 
 		FileStorage::Response::GetChunk.new mid, digest, chunk, b64_encoded_data
-	rescue e
-		Baguette::Log.error "Error handling read_chunk: #{e.message}"
-		FileStorage::Errors::GenericError.new mid.not_nil!, "Unexpected error: #{e.message}"
 	end
 
 	# the client sent an upload request
@@ -216,9 +215,6 @@ class FileStorage::Storage
 		# TODO: store upload request in UserData?
 
 		FileStorage::Response::Upload.new request.mid, path
-	rescue e
-		Baguette::Log.error "Error handling upload request: #{e.message}"
-		FileStorage::Errors::GenericError.new mid.not_nil!, "Unexpected error in upload request: #{e.message}"
 	end
 
 	# The client sent a download request.
@@ -235,7 +231,7 @@ class FileStorage::Storage
 
 				# This is acceptation.
 				# Return some useful values: number of chunks.
-				return FileStorage::Response::Download.new mid, file_transfer.file_info.nb_chunks
+				return FileStorage::Response::Download.new mid, file_transfer.file_info
 			else
 				return FileStorage::Errors::GenericError.new mid, "Unknown file digest: #{file_digest}"
 			end
@@ -247,9 +243,6 @@ class FileStorage::Storage
 
 		# Should have returned by now: file wasn't found.
 		FileStorage::Errors::GenericError.new mid, "File not found with provided parameters."
-	rescue e
-		Baguette::Log.error "Error handling download request: #{e.message}"
-		FileStorage::Errors::GenericError.new mid.not_nil!, "Unexpected error in download request: #{e.message}"
 	end
 
 	# Entry point for request management
@@ -283,8 +276,9 @@ class FileStorage::Storage
 
 		path = get_fs_path file_digest
 		real_size = 0
-		File.open(path, "rb").read_at offset, chunk_size do |buffer|
-			real_size = buffer.read buffer_data
+		File.open(path, "rb") do |file|
+			file.seek offset
+			real_size = file.read buffer_data
 		end
 
 		buffer_data[0..real_size-1]

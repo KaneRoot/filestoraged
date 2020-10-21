@@ -64,9 +64,9 @@ class FileStorage::Service < IPC::Server
 	@auth : AuthD::Client
 	@auth_key : String
 
-	def initialize(storage_directory, @auth_key)
+	def initialize(storage_directory, @auth_key, reindex : Bool)
 		# Data and metadata storage directory.
-		@storage = FileStorage::Storage.new storage_directory
+		@storage = FileStorage::Storage.new storage_directory, reindex
 
 		@logged_users       = Hash(Int32, AuthD::User::Public).new
 		@all_connections    = Array(Int32).new
@@ -204,6 +204,8 @@ class FileStorage::Service < IPC::Server
 		key = "nico-nico-nii" # Default authd key, as per the specs. :eyes:
 		timer = 30_000        # Default timer: 30 seconds.
 
+		reindex = false
+
 		OptionParser.parse do |parser|
 			parser.banner = "usage: filestoraged [options]"
 
@@ -225,6 +227,11 @@ class FileStorage::Service < IPC::Server
 				Baguette::Context.verbosity = v.to_i
 			end
 
+			parser.on "-I",
+				"--re-index",
+				"Reindex the database." do
+				reindex = true
+			end
 
 			parser.on "-h",
 				"--help",
@@ -241,7 +248,7 @@ class FileStorage::Service < IPC::Server
 			end
 		end
 
-		service = ::FileStorage::Service.new storage_directory, key
+		service = ::FileStorage::Service.new storage_directory, key, reindex
 		service.base_timer = timer
 		service.timer = timer
 
