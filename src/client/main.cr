@@ -126,8 +126,6 @@ def put(client : FileStorage::Client)
 end
 
 def get(client : FileStorage::Client)
-	Baguette::Log.warning "get command not complete, yet"
-
 	files = Context.args
 	files.each do |filedigest|
 		response = client.download filedigest
@@ -136,7 +134,7 @@ def get(client : FileStorage::Client)
 			Baguette::Log.info "downloading file #{filedigest} with #{response.file_info.nb_chunks} chunks"
 			client.get_chunks response, Context.path
 		else
-			Baguette::Log.error ">> #{response.class.name}"
+			Baguette::Log.error "#{response.class.name}"
 			next
 		end
 	end

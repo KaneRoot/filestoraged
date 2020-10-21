@@ -85,7 +85,6 @@ class FileStorage::Client < IPC::Client
 
 	def get_chunks(dl_response : FileStorage::Response::Download, path : String = ".")
 		file_path = "#{path}/#{dl_response.file_info.name}"
-		Baguette::Log.debug "Getting #{file_path}"
 
 		digest = dl_response.file_info.digest
 		buffer_size = FileStorage.message_buffer_size
@@ -94,12 +93,10 @@ class FileStorage::Client < IPC::Client
 		size = 0
 
 		while counter < dl_response.file_info.nb_chunks
-			Baguette::Log.debug "Getting #{file_path}: chunk #{counter+1}/#{dl_response.file_info.nb_chunks}"
+			Baguette::Log.debug "getting #{file_path}: chunk #{counter+1}/#{dl_response.file_info.nb_chunks}"
 			get_chunk_message = FileStorage::Request::GetChunk.new digest, counter
 			send_now @server_fd.not_nil!, get_chunk_message
 			response = parse_message [ FileStorage::Response::GetChunk ], read
-			# TODO: write the file
-			pp! response
 
 			case response
 			when FileStorage::Response::GetChunk
@@ -120,7 +117,8 @@ class FileStorage::Client < IPC::Client
 			data : Bytes
 		)
 
-		pp! file_path, chunk_size, offset, data.size
+		# pp! file_path, chunk_size, offset, data.size
+		Baguette::Log.debug "writing on #{file_path}"
 
 		# Create the file if non existant.
 		File.open(file_path, "a+") do |file|
