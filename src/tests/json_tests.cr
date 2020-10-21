@@ -1,6 +1,6 @@
 require "json"
 
-require "../common/filestorage.cr"
+require "../filestorage.cr"
 
 unless ARGV.size > 0
 	raise "Usage: json_tests file"

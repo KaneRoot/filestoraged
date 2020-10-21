@@ -1,8 +1,8 @@
-require "../common/filestorage.cr"
+require "../filestorage.cr"
 require "ipc"
 require "option_parser"
 
-require "../common/utils.cr"
+require "../utils.cr"
 require "../server/context.cr"
 
 filename = "./README.md"

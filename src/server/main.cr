@@ -6,8 +6,8 @@ require "colorize"
 
 require "baguette-crystal-base"
 
-require "../common/colors"
-# require "../common/filestorage.cr"
+require "../colors"
+# require "../filestorage.cr"
 
 # TODO: if the user is disconnected, we should ask him if it still want to process
 #       for old requests.

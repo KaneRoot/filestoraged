@@ -1,6 +1,6 @@
 require "dodb"
 require "json"
-require "../common/filestorage.cr"
+require "../filestorage.cr"
 
 # this is a copy of User and TransferInfo classes from src/server/context.cr
 class User

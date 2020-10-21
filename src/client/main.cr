@@ -6,11 +6,10 @@ require "json"
 require "base64"
 
 require "./authd_api.cr"
+require "./lib.cr"
 require "../server/network.cr"
 require "../server/storage.cr"
 require "../server/storage/*"
-require "../common/*"
-require "../common/requests/*"
 
 # TODO
 # For now, this example only upload files.

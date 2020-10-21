@@ -1,4 +1,4 @@
-require "../common/filestorage.cr"
+require "../filestorage.cr"
 
 # This file test the following code
 # classes:
