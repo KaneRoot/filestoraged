@@ -44,6 +44,8 @@ module FileStorage
 	end
 	class AdminAuthorizationException < ::Exception
 	end
+	class FileTooBig < ::Exception
+	end
 end
 
 
@@ -60,6 +62,8 @@ class FileStorage::Service < IPC::Server
 
 	getter logged_users        : Hash(Int32, AuthD::User::Public)
 	getter all_connections     : Array(Int32)
+
+	property max_file_size     : UInt64 = 10_000_000 # Bytes
 
 	@auth : AuthD::Client
 	@auth_key : String
@@ -127,6 +131,9 @@ class FileStorage::Service < IPC::Server
 		rescue e : NotLoggedException
 			Baguette::Log.warning "#{request_name} user not logged"
 			Errors::GenericError.new request_id, "user not logged"
+		rescue e : FileTooBig
+			Baguette::Log.warning "#{request_name} file too big: #{e.message}"
+			Errors::FileTooBig.new request_id, @max_file_size
 		rescue e
 			Baguette::Log.error "#{request_name} generic error #{e}"
 			Errors::GenericError.new request_id, "unexpected error"
@@ -206,6 +213,8 @@ class FileStorage::Service < IPC::Server
 
 		reindex = false
 
+		max_file_size : UInt64 = 10_000_000 # default, 10 MB
+
 		OptionParser.parse do |parser|
 			parser.banner = "usage: filestoraged [options]"
 
@@ -213,25 +222,37 @@ class FileStorage::Service < IPC::Server
 				"--root-directory dir",
 				"The root directory for FileStoraged." do |opt|
 				storage_directory = opt
+				Baguette::Log.info "Storage directory: #{storage_directory}"
 			end
 
 			parser.on "-t timer",
 				"--timer timer",
 				"Timer. Default: 30 000 (30 seconds)." do |t|
 				timer = t.to_i
+				Baguette::Log.info "Timer: #{timer}"
 			end
 
 			parser.on "-v verbosity",
 				"--verbosity level",
 				"Verbosity level. From 0 to 3. Default: 1" do |v|
 				Baguette::Context.verbosity = v.to_i
+				Baguette::Log.info "Verbosity: #{v}"
 			end
 
 			parser.on "-I",
 				"--re-index",
 				"Reindex the database." do
+				Baguette::Log.info "Re-index everything!"
 				reindex = true
 			end
+
+			parser.on "-m size",
+				"--max-size size",
+				"Maximum file size (KB). Default: 10 MB." do |s|
+				Baguette::Log.info "Maximum file size: #{s}"
+				max_file_size = s.to_u64 * 1000
+			end
+
 
 			parser.on "-h",
 				"--help",
@@ -251,6 +272,7 @@ class FileStorage::Service < IPC::Server
 		service = ::FileStorage::Service.new storage_directory, key, reindex
 		service.base_timer = timer
 		service.timer = timer
+		service.max_file_size = max_file_size
 
 		service
 	end

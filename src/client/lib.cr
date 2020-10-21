@@ -20,6 +20,7 @@ class FileStorage::Client < IPC::Client
 		em << FileStorage::Errors::FileExists
 		em << FileStorage::Errors::FileDoesNotExist
 		em << FileStorage::Errors::FileFullyUploaded
+		em << FileStorage::Errors::FileTooBig
 		em.parse_ipc_json message
 	end
 end

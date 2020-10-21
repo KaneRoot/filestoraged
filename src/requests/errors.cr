@@ -71,4 +71,14 @@ class FileStorage::Errors
 		end
 	end
 	FileStorage.errors << FileFullyUploaded
+
+	IPC::JSON.message FileTooBig, 207 do
+		property mid        : String
+		property reason     = "file too big"
+		property limit      : UInt64
+
+		def initialize(@mid, @limit)
+		end
+	end
+	FileStorage.errors << FileTooBig
 end

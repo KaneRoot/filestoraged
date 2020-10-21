@@ -12,6 +12,8 @@ class FileStorage::Request
 
 			raise NotLoggedException.new if user.nil?
 
+			raise FileTooBig.new if @file.size > filestoraged.max_file_size
+
 			# FIXME: Maybe this should be moved to FileStorage::Service
 			fd = event.fd
 
