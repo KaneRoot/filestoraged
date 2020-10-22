@@ -23,7 +23,7 @@ dependencies:
 targets:
     filestoraged:
         main: src/server/main.cr
-    client:
+    filestoragec:
         main: src/client/main.cr
     common-tests:
         main: src/tests/common-tests.cr
