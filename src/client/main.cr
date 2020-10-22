@@ -112,12 +112,16 @@ def put(client : FileStorage::Client)
 	end
 
 	files.each do |file|
+		file_info = File.open(file) do |f|
+			FileStorage::FileInfo.new f
+		end
 		response = client.upload file
-		if response.is_a?(FileStorage::Errors::FileFullyUploaded)
-			file_info = File.open(file) do |f|
-				FileStorage::FileInfo.new f
-			end
+		case response
+		when FileStorage::Errors::FileFullyUploaded
 			Baguette::Log.warning "file #{file} already uploaded, digest: #{file_info.digest}"
+			next
+		when FileStorage::Errors::FileTooBig
+			Baguette::Log.warning "file #{file} too big, accepting up to #{response.limit} bytes"
 			next
 		end
 		Baguette::Log.info "transfering: #{file}"
