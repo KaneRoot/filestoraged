@@ -26,7 +26,7 @@ end
 #   but in environment without HTTP integration, this could still be relevant.
 
 class FileStorage::Storage
-	property db : DODB::DataBase(TransferInfo)
+	property db : DODB::CachedDataBase(TransferInfo)
 
 	# Search file informations by their index, owner and tags.
 	property db_by_filedigest : DODB::Index(TransferInfo)
@@ -46,7 +46,7 @@ class FileStorage::Storage
 	# - users/ : DODB UserData (for later use: quotas, rights)
 
 	def initialize(@root, reindex : Bool = false)
-		@db = DODB::DataBase(TransferInfo).new "#{@root}/meta"
+		@db = DODB::CachedDataBase(TransferInfo).new "#{@root}/meta"
 
 		# Where to store uploaded files.
 		FileUtils.mkdir_p "#{@root}/files"
