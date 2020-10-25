@@ -48,6 +48,25 @@ module FileStorage
 	end
 end
 
+class Baguette::Configuration
+	class FileStorage < Base
+		property authd_key           : String = "nico-nico-nii" # Default authd key, as per the specs. :eyes:
+		property authd_key_file      : String? = nil
+
+		property max_file_size       : UInt64 = 10_000_000 # default, 10 MB
+		property storage             : String = "files/"
+		property db_reindex          : Bool   = false
+
+		property verbosity           : Int32  = 3
+		property ipc_timer           : Int32  = 30_000     # Default timer: 30 seconds.
+		property print_ipc_timer     : Bool   = false
+
+		def initialize
+		end
+	end
+end
+
+
 
 class FileStorage::Service < IPC::Server
 	# List of connected users (fd => uid).
@@ -207,13 +226,21 @@ class FileStorage::Service < IPC::Server
 	end
 
 	def self.from_cli
-		storage_directory = "files/"
-		key = "nico-nico-nii" # Default authd key, as per the specs. :eyes:
-		timer = 30_000        # Default timer: 30 seconds.
 
-		reindex = false
+		simulation, no_configuration, configuration_file = Baguette::Configuration.option_parser
 
-		max_file_size : UInt64 = 10_000_000 # default, 10 MB
+		configuration = if no_configuration
+			Baguette::Log.info "do not load a configuration file."
+			Baguette::Configuration::FileStorage.new
+		else
+			Baguette::Configuration::FileStorage.get || Baguette::Configuration::FileStorage.new
+		end
+
+		Baguette::Context.verbosity = configuration.verbosity
+
+		if key_file = configuration.authd_key_file
+			configuration.authd_key = File.read(key_file).chomp
+		end
 
 		OptionParser.parse do |parser|
 			parser.banner = "usage: filestoraged [options]"
@@ -221,60 +248,56 @@ class FileStorage::Service < IPC::Server
 			parser.on "-r root-directory",
 				"--root-directory dir",
 				"The root directory for FileStoraged." do |opt|
-				storage_directory = opt
-				Baguette::Log.info "Storage directory: #{storage_directory}"
+				configuration.storage = opt
+				Baguette::Log.info "Storage directory: #{configuration.storage}"
 			end
 
 			parser.on "-t timer",
 				"--timer timer",
 				"Timer. Default: 30 000 (30 seconds)." do |t|
-				timer = t.to_i
-				Baguette::Log.info "Timer: #{timer}"
-			end
-
-			parser.on "-v verbosity",
-				"--verbosity level",
-				"Verbosity level. From 0 to 3. Default: 1" do |v|
-				Baguette::Context.verbosity = v.to_i
-				Baguette::Log.info "Verbosity: #{v}"
+				configuration.ipc_timer = t.to_i
+				Baguette::Log.info "Timer: #{configuration.ipc_timer}"
 			end
 
 			parser.on "-I",
 				"--re-index",
 				"Reindex the database." do
 				Baguette::Log.info "Re-index everything!"
-				reindex = true
+				configuration.db_reindex = true
 			end
 
 			parser.on "-m size",
 				"--max-size size",
 				"Maximum file size (KB). Default: 10 MB." do |s|
 				Baguette::Log.info "Maximum file size: #{s}"
-				max_file_size = s.to_u64 * 1000
+				configuration.max_file_size = s.to_u64 * 1000
 			end
 
-
-			parser.on "-h",
-				"--help",
-				"Displays this help and exits." do
-				puts parser
-				exit 0
-			end
-
-			# FIXME: Either make this mandatory or print a warning if missing.
 			parser.on "-k file",
 				"--key file",
 				"Reads the authentication key from the provided file." do |file|
-				key = File.read(file).chomp
+				configuration.authd_key = File.read(file).chomp
+			end
+
+			parser.on "-h", "--help", "Displays this help and exits." do
+				puts parser
+				exit 0
 			end
 		end
 
-		service = ::FileStorage::Service.new storage_directory, key, reindex
-		service.base_timer = timer
-		service.timer = timer
-		service.max_file_size = max_file_size
+		if simulation
+			pp! configuration
+			exit 0
+		end
 
-		service
+		::FileStorage::Service.new(configuration.storage,
+			configuration.authd_key,
+			configuration.db_reindex).tap do |service|
+
+			service.base_timer    = configuration.ipc_timer
+			service.timer         = configuration.ipc_timer
+			service.max_file_size = configuration.max_file_size
+		end
 	end
 end
 
