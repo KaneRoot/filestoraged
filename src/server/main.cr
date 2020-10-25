@@ -84,6 +84,8 @@ class FileStorage::Service < IPC::Server
 
 	property max_file_size     : UInt64 = 10_000_000 # Bytes
 
+	property print_timer       : Bool = false
+
 	@auth : AuthD::Client
 	@auth_key : String
 
@@ -180,7 +182,7 @@ class FileStorage::Service < IPC::Server
 
 				case event
 				when IPC::Event::Timer
-					Baguette::Log.debug "IPC::Event::Timer"
+					Baguette::Log.debug "IPC::Event::Timer" if @print_timer
 
 				when IPC::Event::Connection
 					Baguette::Log.debug "IPC::Event::Connection: #{event.fd}"
@@ -297,6 +299,7 @@ class FileStorage::Service < IPC::Server
 			service.base_timer    = configuration.ipc_timer
 			service.timer         = configuration.ipc_timer
 			service.max_file_size = configuration.max_file_size
+			service.print_timer   = configuration.print_ipc_timer
 		end
 	end
 end
