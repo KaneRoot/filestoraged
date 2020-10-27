@@ -50,9 +50,6 @@ end
 
 class Baguette::Configuration
 	class FileStorage < Base
-		property authd_key           : String = "nico-nico-nii" # Default authd key, as per the specs. :eyes:
-		property authd_key_file      : String? = nil
-
 		property max_file_size       : UInt64 = 10_000_000 # default, 10 MB
 		property storage             : String = "files/"
 		property db_reindex          : Bool   = false
@@ -231,6 +228,19 @@ class FileStorage::Service < IPC::Server
 
 		simulation, no_configuration, configuration_file = Baguette::Configuration.option_parser
 
+		# Authd configuration.
+		authd_configuration = if no_configuration
+			Baguette::Log.info "do not load a configuration file."
+			Baguette::Configuration::Auth.new
+		else
+			# Configuration file is for altideald.
+			Baguette::Configuration::Auth.get || Baguette::Configuration::Auth.new
+		end
+		if key_file = authd_configuration.shared_key_file
+			authd_configuration.shared_key = File.read(key_file).chomp
+		end
+
+		# FileStoraged configuration.
 		configuration = if no_configuration
 			Baguette::Log.info "do not load a configuration file."
 			Baguette::Configuration::FileStorage.new
@@ -239,10 +249,6 @@ class FileStorage::Service < IPC::Server
 		end
 
 		Baguette::Context.verbosity = configuration.verbosity
-
-		if key_file = configuration.authd_key_file
-			configuration.authd_key = File.read(key_file).chomp
-		end
 
 		OptionParser.parse do |parser|
 			parser.banner = "usage: filestoraged [options]"
@@ -278,7 +284,7 @@ class FileStorage::Service < IPC::Server
 			parser.on "-k file",
 				"--key file",
 				"Reads the authentication key from the provided file." do |file|
-				configuration.authd_key = File.read(file).chomp
+				authd_configuration.shared_key = File.read(file).chomp
 			end
 
 			parser.on "-h", "--help", "Displays this help and exits." do
@@ -288,12 +294,13 @@ class FileStorage::Service < IPC::Server
 		end
 
 		if simulation
+			pp! authd_configuration
 			pp! configuration
 			exit 0
 		end
 
 		::FileStorage::Service.new(configuration.storage,
-			configuration.authd_key,
+			authd_configuration.shared_key,
 			configuration.db_reindex).tap do |service|
 
 			service.base_timer    = configuration.ipc_timer
