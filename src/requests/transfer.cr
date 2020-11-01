@@ -23,8 +23,9 @@ class FileStorage::Request
 			raise NotLoggedException.new if user.nil?
 
 			if filestoraged.faulty
-				if @faulty_nb == 4
-					@faulty_nb = 0
+				filestoraged.faulty_nb += 1
+				if filestoraged.faulty_nb == 4
+					filestoraged.faulty_nb = 0
 					raise "FAULTY"
 				end
 			end
