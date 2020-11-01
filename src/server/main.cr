@@ -50,13 +50,15 @@ end
 
 class Baguette::Configuration
 	class FileStorage < Base
-		property max_file_size       : UInt64 = 10_000_000 # default, 10 MB
-		property storage             : String = "files/"
-		property db_reindex          : Bool   = false
+		property max_file_size   : UInt64 = 10_000_000 # default, 10 MB
+		property storage         : String = "files/"
+		property db_reindex      : Bool   = false
 
-		property verbosity           : Int32  = 3
-		property ipc_timer           : Int32  = 30_000     # Default timer: 30 seconds.
-		property print_ipc_timer     : Bool   = false
+		property faulty          : Bool   = false      # To test clients on transfer errors.
+
+		property verbosity       : Int32  = 3
+		property ipc_timer       : Int32  = 30_000     # Default timer: 30 seconds.
+		property print_ipc_timer : Bool   = false
 
 		def initialize
 		end
@@ -82,6 +84,9 @@ class FileStorage::Service < IPC::Server
 	property max_file_size     : UInt64 = 10_000_000 # Bytes
 
 	property print_timer       : Bool = false
+
+	property faulty            : Bool = false
+	property faulty_nb         : Int32 = 0
 
 	@auth : AuthD::Client
 	@auth_key : String
@@ -281,6 +286,13 @@ class FileStorage::Service < IPC::Server
 				configuration.max_file_size = s.to_u64 * 1000
 			end
 
+			parser.on "-f",
+				"--faulty",
+				"Messages will be dropped, rate: 1/5." do
+				Baguette::Log.info "Faulty: messages will be dropped."
+				configuration.faulty = true
+			end
+
 			parser.on "-k file",
 				"--key file",
 				"Reads the authentication key from the provided file." do |file|
@@ -307,6 +319,7 @@ class FileStorage::Service < IPC::Server
 			service.timer         = configuration.ipc_timer
 			service.max_file_size = configuration.max_file_size
 			service.print_timer   = configuration.print_ipc_timer
+			service.faulty        = configuration.faulty
 		end
 	end
 end

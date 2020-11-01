@@ -22,6 +22,13 @@ class FileStorage::Request
 
 			raise NotLoggedException.new if user.nil?
 
+			if filestoraged.faulty
+				if @faulty_nb == 4
+					@faulty_nb = 0
+					raise "FAULTY"
+				end
+			end
+
 			# FIXME: Maybe this should be moved to FileStorage::Service
 			fd = event.fd
 
