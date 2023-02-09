@@ -1,10 +1,11 @@
 require "ipc"
 
-class FileStorage::Client < IPC::Client
+class FileStorage::Client < IPC
 	property auth_token : String
 
 	def initialize(@auth_token, service_name = "filestorage")
-		super service_name
+		super
+		@server_fd = self.connect service_name
 	end
 
 	# TODO: parse_message should raise exception if response not anticipated
@@ -25,10 +26,10 @@ class FileStorage::Client < IPC::Client
 	end
 end
 
-class FileStorage::Client < IPC::Client
+class FileStorage::Client < IPC
 	def login
 		request = FileStorage::Request::Login.new @auth_token
-		send_now @server_fd.not_nil!, request
+		write @server_fd.not_nil!, request
 		parse_message [ FileStorage::Response::Login ], read
 	end
 
@@ -57,7 +58,7 @@ class FileStorage::Client < IPC::Client
 					counter,
 					buffer[0 ... size]
 
-				send_now @server_fd.not_nil!, transfer_message
+				write @server_fd.not_nil!, transfer_message
 				counter += 1
 
 				buffer = Bytes.new buffer_size
@@ -80,7 +81,7 @@ class FileStorage::Client < IPC::Client
 
 	def download(filedigest = nil, name = nil, tags = nil)
 		request = FileStorage::Request::Download.new filedigest, name, tags
-		send_now @server_fd.not_nil!, request
+		write @server_fd.not_nil!, request
 		parse_message [ FileStorage::Response::Download ], read
 	end
 
@@ -96,7 +97,7 @@ class FileStorage::Client < IPC::Client
 		while counter < dl_response.file_info.nb_chunks
 			Baguette::Log.debug "getting #{file_path}: chunk #{counter+1}/#{dl_response.file_info.nb_chunks}"
 			get_chunk_message = FileStorage::Request::GetChunk.new digest, counter
-			send_now @server_fd.not_nil!, get_chunk_message
+			write @server_fd.not_nil!, get_chunk_message
 			response = parse_message [ FileStorage::Response::GetChunk ], read
 
 			case response
@@ -134,7 +135,7 @@ class FileStorage::Client < IPC::Client
 		File.open(file) do |f|
 			file_info = FileStorage::FileInfo.new f
 			request = FileStorage::Request::Upload.new file_info
-			send_now @server_fd.not_nil!, request
+			write @server_fd.not_nil!, request
 		end
 
 		parse_message [ FileStorage::Response::Upload ], read

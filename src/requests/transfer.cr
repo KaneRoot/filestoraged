@@ -17,7 +17,7 @@ class FileStorage::Request
 			@mid = UUID.random.to_s
 		end
 
-		def handle(filestoraged : FileStorage::Service, event : IPC::Event::Events)
+		def handle(filestoraged : FileStorage::Service, event : IPC::Event)
 			user = filestoraged.get_logged_user event
 
 			raise NotLoggedException.new if user.nil?
@@ -51,7 +51,7 @@ class FileStorage::Request
 			@mid = UUID.random.to_s
 		end
 
-		def handle(filestoraged : FileStorage::Service, event : IPC::Event::Events)
+		def handle(filestoraged : FileStorage::Service, event : IPC::Event)
 			user = filestoraged.get_logged_user event
 
 			raise NotLoggedException.new if user.nil?

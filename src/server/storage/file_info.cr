@@ -24,13 +24,9 @@ module FileStorage
 
 	# private function
 	def self.data_digest(data : Bytes)
-		iodata = IO::Memory.new data, false
-		buffer = Bytes.new FileStorage.file_reading_buffer_size
-
-		io = OpenSSL::DigestIO.new(iodata, "SHA256")
-		while io.read(buffer) > 0; end
-
-		io.digest.hexstring
+		digest = OpenSSL::Digest.new "sha256"
+		digest.update data
+		digest.hexfinal
 	end
 
 	# private function

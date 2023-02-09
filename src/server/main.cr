@@ -1,4 +1,5 @@
 require "option_parser"
+require "ipc"
 require "ipc/json"
 require "authd"
 
@@ -30,7 +31,7 @@ require "./network.cr"
 require "dodb"
 
 class IPC::JSON
-	def handle(filestoraged : FileStorage::Service, event : IPC::Event::Events)
+	def handle(filestoraged : FileStorage::Service, event : IPC::Event)
 		raise "unknown request"
 	end
 end
@@ -67,7 +68,7 @@ end
 
 
 
-class FileStorage::Service < IPC::Server
+class FileStorage::Service < IPC
 	# List of connected users (fd => uid).
 	property connected_users = Hash(Int32, Int32).new
 
@@ -92,6 +93,7 @@ class FileStorage::Service < IPC::Server
 	@auth_key : String
 
 	def initialize(storage_directory, @auth_key, reindex : Bool)
+		super()
 		# Data and metadata storage directory.
 		@storage = FileStorage::Storage.new storage_directory, reindex
 
@@ -101,10 +103,10 @@ class FileStorage::Service < IPC::Server
 		@auth = AuthD::Client.new
 		@auth.key = @auth_key
 
-		super "filestorage"
+		self.service_init "filestorage"
 	end
 
-	def get_logged_user(event : IPC::Event::Events)
+	def get_logged_user(event : IPC::Event)
 		fd = event.fd
 
 		@logged_users[fd]?
@@ -129,9 +131,13 @@ class FileStorage::Service < IPC::Server
 		@storage.user_data_per_user.update_or_create user_data.uid.to_s, user_data
 	end
 
-	def handle_request(event : IPC::Event::MessageReceived)
+	def handle_request(event : IPC::Event)
 
-		request = FileStorage.requests.parse_ipc_json event.message
+		array = event.message.not_nil!
+		slice = Slice.new array.to_unsafe, array.size
+		message = IPCMessage::TypedMessage.deserialize slice
+		request = FileStorage.requests.parse_ipc_json message.not_nil!
+
 		if request.nil?
 			raise "unknown request type"
 		end
@@ -166,7 +172,7 @@ class FileStorage::Service < IPC::Server
 		# in the responses. Allows identifying responses easily.
 		response.id = request.id
 
-		send event.fd, response
+		schedule event.fd, response
 
 		response_name = response.class.name.sub /^FileStorage::(Response|Errors)::/, ""
 		if response.responds_to?(:reason)
@@ -183,15 +189,15 @@ class FileStorage::Service < IPC::Server
 			begin
 
 				case event
-				when IPC::Event::Timer
-					Baguette::Log.debug "IPC::Event::Timer" if @print_timer
+				when LibIPC::EventType::Timer
+					Baguette::Log.debug "LibIPC::EventType::Timer" if @print_timer
 
-				when IPC::Event::Connection
-					Baguette::Log.debug "IPC::Event::Connection: #{event.fd}"
+				when LibIPC::EventType::Connection
+					Baguette::Log.debug "LibIPC::EventType::Connection: #{event.fd}"
 					@all_connections << event.fd
 
-				when IPC::Event::Disconnection
-					Baguette::Log.debug "IPC::Event::Disconnection: #{event.fd}"
+				when LibIPC::EventType::Disconnection
+					Baguette::Log.debug "LibIPC::EventType::Disconnection: #{event.fd}"
 					fd = event.fd
 
 					@logged_users.delete fd
@@ -201,26 +207,29 @@ class FileStorage::Service < IPC::Server
 						fd != event.fd
 					end
 
-				when IPC::Event::ExtraSocket
-					Baguette::Log.warning "IPC::Event::ExtraSocket: should not happen in this service"
+				when LibIPC::EventType::External
+					Baguette::Log.warning "LibIPC::EventType::ExtraSocket: should not happen in this service"
 
-				when IPC::Event::Switch
-					Baguette::Log.warning "IPC::Event::Switch: should not happen in this service"
+				when LibIPC::EventType::SwitchTx
+					Baguette::Log.warning "LibIPC::EventType::SwitchTx: should not happen in this service"
 
-				# IPC::Event::Message has to be the last entry
+				when LibIPC::EventType::SwitchRx
+					Baguette::Log.warning "LibIPC::EventType::SwitchRx: should not happen in this service"
+
+				# LibIPC::EventType::Message has to be the last entry
 				# because ExtraSocket and Switch inherit from Message class
-				when IPC::Event::MessageReceived
-					Baguette::Log.debug "IPC::Event::Message: #{event.fd}"
+				when LibIPC::EventType::MessageRx
+					Baguette::Log.debug "LibIPC::EventType::MessageRx: #{event.fd}"
 
 					request_start = Time.utc
 					handle_request event
 					duration = Time.utc - request_start
 					Baguette::Log.debug "request took: #{duration}"
 
-				when IPC::Event::MessageSent
-					Baguette::Log.debug "IPC::Event::MessageSent: #{event.fd}"
+				when LibIPC::EventType::MessageTx
+					Baguette::Log.debug "LibIPC::EventType::MessageTx: #{event.fd}"
 				else
-					Baguette::Log.warning "unhandled IPC event: #{event.class}"
+					Baguette::Log.warning "unhandled LibIPC event: #{event.class}"
 				end
 
 			rescue exception
@@ -315,8 +324,7 @@ class FileStorage::Service < IPC::Server
 			authd_configuration.shared_key,
 			configuration.db_reindex).tap do |service|
 
-			service.base_timer    = configuration.ipc_timer
-			service.timer         = configuration.ipc_timer
+			service.timer configuration.ipc_timer
 			service.max_file_size = configuration.max_file_size
 			service.print_timer   = configuration.print_ipc_timer
 			service.faulty        = configuration.faulty

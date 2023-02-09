@@ -13,7 +13,7 @@ class FileStorage::Request
 			@mid = UUID.random.to_s
 		end
 
-		def handle(filestoraged : FileStorage::Service, event : IPC::Event::Events)
+		def handle(filestoraged : FileStorage::Service, event : IPC::Event)
 			logged_users = filestoraged.logged_users
 
 			user, _ = filestoraged.decode_token token

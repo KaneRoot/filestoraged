@@ -24,7 +24,7 @@
 #		# If already in users_status: 
 #		#   check if the requests are the same
 #		#     if not: add them to the user structure in users_status
-#		def handle(filestoraged : FileStorage::Service, event : IPC::Event::Events)
+#		def handle(filestoraged : FileStorage::Service, event : IPC::Event)
 #
 #			token  = filestoraged.auth.decode_token @token
 #			userid = token.uid

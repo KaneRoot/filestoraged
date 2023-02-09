@@ -1,4 +1,4 @@
-name: filestorage
+name: filestoraged
 version: 0.1.0
 
 authors:
@@ -14,20 +14,17 @@ dependencies:
     git: https://git.baguette.netlib.re/Baguette/dodb.cr
   authd:
     git: https://git.baguette.netlib.re/Baguette/authd.git
-    branch: master
   baguette-crystal-base:
     git: https://git.baguette.netlib.re/Baguette/baguette-crystal-base
-    branch: master
-
 
 targets:
-    filestoraged:
-        main: src/server/main.cr
-    filestoragec:
-        main: src/client/main.cr
-    common-tests:
-        main: src/tests/common-tests.cr
-    json-tests:
-        main: src/tests/json_tests.cr
+  filestoraged:
+    main: src/server/main.cr
+  filestoragec:
+    main: src/client/main.cr
+  common-tests:
+    main: src/tests/common-tests.cr
+  json-tests:
+    main: src/tests/json_tests.cr
 
-license: MIT
+license: ISC
