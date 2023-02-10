@@ -188,7 +188,7 @@ class FileStorage::Service < IPC
 		self.loop do |event|
 			begin
 
-				case event
+				case event.type
 				when LibIPC::EventType::Timer
 					Baguette::Log.debug "LibIPC::EventType::Timer" if @print_timer
 
@@ -229,7 +229,7 @@ class FileStorage::Service < IPC
 				when LibIPC::EventType::MessageTx
 					Baguette::Log.debug "LibIPC::EventType::MessageTx: #{event.fd}"
 				else
-					Baguette::Log.warning "unhandled LibIPC event: #{event.class}"
+					Baguette::Log.warning "unhandled LibIPC event: #{event.type}"
 				end
 
 			rescue exception
