@@ -31,13 +31,9 @@ module FileStorage
 
 	# private function
 	def self.file_digest(file : File)
-		# 1M read buffer
-		buffer = Bytes.new(1_000_000)
-
-		io = OpenSSL::DigestIO.new(file, "SHA256")
-		while io.read(buffer) > 0 ; end
-
-		io.digest.hexstring
+		digest = OpenSSL::Digest.new "sha256"
+		digest.update file.gets_to_end()
+		digest.hexfinal
 	end
 end
 
@@ -68,7 +64,7 @@ class FileStorage::FileInfo
 
 	def initialize(file : File, tags = nil)
 		@name = File.basename file.path
-		@size = file.size
+		@size = file.size.to_u64
 		@digest = FileStorage.file_digest file
 		@nb_chunks = (@size / FileStorage.message_buffer_size).ceil.to_i
 		@tags = tags || [] of String

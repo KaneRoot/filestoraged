@@ -2,10 +2,22 @@ require "ipc"
 
 class FileStorage::Client < IPC
 	property auth_token : String
+	property server_fd : Int32
 
 	def initialize(@auth_token, service_name = "filestorage")
-		super
-		@server_fd = self.connect service_name
+		super()
+		@server_fd = 0 # Makes the compiler happy.
+		fd = self.connect service_name
+		if fd.nil?
+			raise "couldn't connect to '#{service_name}' IPC service"
+		end
+		@server_fd = fd.not_nil!
+	end
+
+	def read
+		slice = self.read @server_fd
+		m = IPCMessage::TypedMessage.deserialize slice
+		m.not_nil!
 	end
 
 	# TODO: parse_message should raise exception if response not anticipated
@@ -24,12 +36,10 @@ class FileStorage::Client < IPC
 		em << FileStorage::Errors::FileTooBig
 		em.parse_ipc_json message
 	end
-end
 
-class FileStorage::Client < IPC
 	def login
 		request = FileStorage::Request::Login.new @auth_token
-		write @server_fd.not_nil!, request
+		write @server_fd, request
 		parse_message [ FileStorage::Response::Login ], read
 	end
 
@@ -58,7 +68,7 @@ class FileStorage::Client < IPC
 					counter,
 					buffer[0 ... size]
 
-				write @server_fd.not_nil!, transfer_message
+				write @server_fd, transfer_message
 				counter += 1
 
 				buffer = Bytes.new buffer_size
@@ -81,7 +91,7 @@ class FileStorage::Client < IPC
 
 	def download(filedigest = nil, name = nil, tags = nil)
 		request = FileStorage::Request::Download.new filedigest, name, tags
-		write @server_fd.not_nil!, request
+		write @server_fd, request
 		parse_message [ FileStorage::Response::Download ], read
 	end
 
@@ -97,7 +107,7 @@ class FileStorage::Client < IPC
 		while counter < dl_response.file_info.nb_chunks
 			Baguette::Log.debug "getting #{file_path}: chunk #{counter+1}/#{dl_response.file_info.nb_chunks}"
 			get_chunk_message = FileStorage::Request::GetChunk.new digest, counter
-			write @server_fd.not_nil!, get_chunk_message
+			write @server_fd, get_chunk_message
 			response = parse_message [ FileStorage::Response::GetChunk ], read
 
 			case response
@@ -135,7 +145,7 @@ class FileStorage::Client < IPC
 		File.open(file) do |f|
 			file_info = FileStorage::FileInfo.new f
 			request = FileStorage::Request::Upload.new file_info
-			write @server_fd.not_nil!, request
+			write @server_fd, request
 		end
 
 		parse_message [ FileStorage::Response::Upload ], read

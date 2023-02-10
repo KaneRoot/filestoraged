@@ -15,17 +15,6 @@ module FileStorage
 	class_getter errors    = [] of IPC::JSON.class
 end
 
-class FileStorage::Client < IPC
-	def initialize
-		super
-		fd = self.connect "filestorage"
-		if fd.nil?
-			raise "couldn't connect to 'auth' IPC service"
-		end
-		@server_fd = fd
-	end
-end
-
 require "../requests/login.cr"
 require "../requests/transfer.cr"
 require "../requests/upload.cr"
